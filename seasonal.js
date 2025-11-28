@@ -13,11 +13,8 @@
     const d = new Date(year + 1, month, day, 0, 0, 0, 0);
     return isFinite(d) ? d : null;
   }
-  function daysLeftInCurrentMonth(now){
-    const start = new Date(now.getTime()); start.setHours(0,0,0,0);
-    const nextMonthStart = new Date(now.getFullYear(), now.getMonth()+1, 1);
-    const diff = (nextMonthStart.getTime() - start.getTime()) / 86400000; // includes today
-    return Math.max(1, Math.round(diff));
+  function daysInCurrentMonth(now){
+    return new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
   }
 
   function computePhase(settings, nowTs){
@@ -87,35 +84,22 @@
     const phase = computePhase(settings, nowTs);
     if(!phase.hasSeason) return { phase };
     const totalBalanceCents = transactions.reduce((a,t)=> a + t.amountCents, 0);
-
-    // Snapshot season income once we enter off-season if not already stored.
-    if(phase.isOffSeason && !settings.seasonIncomeCents){
-      settings.seasonIncomeCents = totalBalanceCents; // first seen balance after season ended
-    }
-
-    const offSeasonOriginalBudget = settings.seasonIncomeCents || 0;
-
-    let remainingBudget = offSeasonOriginalBudget;
-    if(phase.isOffSeason){
-      // Off-season transactions = those after offSeasonStartTs
-      const offSeasonTxs = transactions.filter(t=> t.createdAt >= phase.offSeasonStartTs);
-      const delta = offSeasonTxs.reduce((a,t)=> a + t.amountCents, 0); // incomes positive, expenses negative
-      remainingBudget = offSeasonOriginalBudget + delta;
-    }
+    const safeBudget = Math.max(0, totalBalanceCents);
 
     let dailyAllowance=null, weeklyAllowance=null, monthlyAllowance=null;
     if(phase.isOffSeason && phase.daysRemainingOff){
-      dailyAllowance = Math.floor(remainingBudget / phase.daysRemainingOff);
-      const weekDays = Math.min(7, phase.daysRemainingOff);
-      const monthDays = Math.min(30, phase.daysRemainingOff);
-      weeklyAllowance = dailyAllowance * weekDays;
-      monthlyAllowance = dailyAllowance * monthDays;
+      const now = new Date(nowTs);
+      const daysRemaining = phase.daysRemainingOff;
+      dailyAllowance = Math.floor(safeBudget / daysRemaining);
+      const weekDays = Math.min(daysRemaining, 7);
+      const monthDays = Math.min(daysRemaining, daysInCurrentMonth(now));
+      weeklyAllowance = Math.floor(dailyAllowance * Math.max(1, weekDays));
+      monthlyAllowance = Math.floor(dailyAllowance * Math.max(1, monthDays));
     }
 
     return {
       phase,
-      offSeasonOriginalBudget,
-      remainingBudget,
+      remainingBudget: safeBudget,
       dailyAllowance,
       weeklyAllowance,
       monthlyAllowance

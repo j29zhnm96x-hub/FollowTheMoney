@@ -1147,9 +1147,6 @@
   function updateSeasonalStats(){
     if(!window.SeasonalLogic) return;
     const result = window.SeasonalLogic.computeAllowances(settings, transactions, Date.now());
-    if(settings.seasonIncomeCents && settings.seasonIncomeCents > 0){
-      dbSaveSettings(settings); // persist snapshot
-    }
     if(seasonInfoEl){
       if(!result.phase || !result.phase.hasSeason){
         seasonInfoEl.textContent = 'No season set.';
@@ -1683,6 +1680,8 @@
     });
   }
   registerServiceWorker();
+
+  setInterval(()=> updateSeasonalStats(), 30 * 60 * 1000);
 
   window.addEventListener('beforeunload', ()=> flushLocalBackup('beforeunload'));
   document.addEventListener('visibilitychange', ()=>{
