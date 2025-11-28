@@ -68,6 +68,40 @@
       <div id="historyGroupSummary" class="group-summary" hidden></div>
       <main class="history-list" id="historyList" aria-live="polite"></main>
     </section>
+    <section id="screen-graph" class="screen" aria-label="Insights" hidden>
+      <header class="graph-top-bar" role="banner">
+        <div class="graph-top-left">
+          <p class="graph-eyebrow">Insights</p>
+          <h1 class="graph-title">Landscape view</h1>
+          <span class="graph-hint">Rotate upright to return</span>
+        </div>
+        <div class="graph-control-stack">
+          <div id="graphTypeFilters" class="graph-type-filters" role="group" aria-label="Graph Type">
+            <button class="graph-type-pill" data-graph-type="income">Income</button>
+            <button class="graph-type-pill" data-graph-type="expense">Expense</button>
+          </div>
+          <div class="graph-view-toggle" role="radiogroup" aria-label="Group by">
+            <label>
+              <input type="radio" name="graphGroup" value="category" checked>
+              <span>Categories</span>
+            </label>
+            <label>
+              <input type="radio" name="graphGroup" value="name">
+              <span>Names</span>
+            </label>
+          </div>
+        </div>
+      </header>
+      <div class="graph-body">
+        <div class="graph-canvas-wrap">
+          <canvas id="graphCanvas" width="340" height="340" aria-label="Distribution chart"></canvas>
+          <div id="graphEmpty" class="graph-empty" hidden>No data to visualize yet.</div>
+        </div>
+        <div class="graph-legend-panel">
+          <div class="graph-legend" id="graphLegend" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
     <div id="settingsModal" class="modal" hidden>
       <div class="modal-overlay" data-dismiss></div>
       <div class="modal-panel" role="dialog" aria-modal="true" aria-label="Settings">

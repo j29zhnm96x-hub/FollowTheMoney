@@ -53,6 +53,12 @@
   const btnImportData = $('#btnImportData');
   const importFileInput = $('#importFile');
   const historyLockToggle = $('#historyLockToggle');
+  const graphScreen = $('#screen-graph');
+  const graphTypeFiltersEl = $('#graphTypeFilters');
+  const graphLegendEl = $('#graphLegend');
+  const graphCanvas = $('#graphCanvas');
+  const graphEmptyEl = $('#graphEmpty');
+  const graphGroupInputs = Array.from(document.querySelectorAll('input[name="graphGroup"]'));
 
   let sheetType = null; // 'income' | 'expense'
   let sheetMode = 'add'; // 'add' | 'edit'
@@ -79,6 +85,12 @@
     expenseNames: []
   };
   let pendingHistoryHighlightId = null;
+  let graphType = 'expense';
+  let graphGrouping = 'category';
+  let previousNonGraphScreen = 'home';
+  let currentScreen = 'home';
+  const graphColorCache = new Map();
+  const graphPalette = ['#30d6a4','#ff4f6a','#6580ff','#f6c343','#58c7ff','#ff9fd5','#8be28b','#ffa25e','#ffd166','#b388ff'];
 
   // IndexedDB setup
   const DB_NAME = 'followthemoney_plain';
@@ -295,6 +307,159 @@
         return `${yearShort}-${month}-${day}`;
       default:
         return `${day}/${month}/${yearShort}`;
+    }
+  }
+  function getGraphColor(label){
+    if(graphColorCache.has(label)) return graphColorCache.get(label);
+    const hash = Array.from(label).reduce((acc,char)=> acc + char.charCodeAt(0),0);
+    const color = graphPalette[hash % graphPalette.length];
+    graphColorCache.set(label,color);
+    return color;
+  }
+  function buildGraphSegments(){
+    const filterPositive = graphType === 'income';
+    const key = graphGrouping === 'name' ? 'name' : 'category';
+    const fallback = graphGrouping === 'name' ? 'Unnamed' : 'Uncategorized';
+    const map = new Map();
+    transactions.forEach(t=>{
+      if(filterPositive && t.amountCents < 0) return;
+      if(!filterPositive && t.amountCents >= 0) return;
+      const labelRaw = (t[key] && t[key].trim()) || fallback;
+      const amount = Math.abs(t.amountCents);
+      if(amount<=0) return;
+      map.set(labelRaw, (map.get(labelRaw)||0) + amount);
+    });
+    return Array.from(map.entries())
+      .map(([label,value])=>({ label, value }))
+      .sort((a,b)=> b.value - a.value);
+  }
+  function resizeGraphCanvas(){
+    if(!graphCanvas) return;
+    const wrapper = graphCanvas.parentElement;
+    if(!wrapper) return;
+    const size = Math.min(wrapper.clientWidth || 0, wrapper.clientHeight || wrapper.clientWidth || 0) || 280;
+    const dpr = window.devicePixelRatio || 1;
+    graphCanvas.width = size * dpr;
+    graphCanvas.height = size * dpr;
+    graphCanvas.style.width = `${size}px`;
+    graphCanvas.style.height = `${size}px`;
+  }
+  function updateGraphTypeButtons(){
+    if(!graphTypeFiltersEl) return;
+    graphTypeFiltersEl.querySelectorAll('.graph-type-pill').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.graphType === graphType);
+    });
+  }
+  function renderGraph(){
+    if(!graphCanvas || !graphLegendEl) return;
+    const ctx = graphCanvas.getContext('2d');
+    if(!ctx) return;
+    const segments = buildGraphSegments();
+    const total = segments.reduce((sum,item)=> sum + item.value, 0);
+    graphLegendEl.innerHTML = '';
+    if(total<=0){
+      if(graphEmptyEl) graphEmptyEl.hidden = false;
+      graphCanvas.style.visibility = 'hidden';
+      return;
+    }
+    graphCanvas.style.visibility = 'visible';
+    if(graphEmptyEl) graphEmptyEl.hidden = true;
+    resizeGraphCanvas();
+    ctx.clearRect(0,0,graphCanvas.width, graphCanvas.height);
+    const centerX = graphCanvas.width/2;
+    const centerY = graphCanvas.height/2;
+    const radius = Math.min(centerX, centerY) - 12*(window.devicePixelRatio||1);
+    const innerRadius = radius * 0.55;
+    let startAngle = -Math.PI/2;
+    segments.forEach(segment=>{
+      const sliceAngle = (segment.value/total) * Math.PI * 2;
+      const endAngle = startAngle + sliceAngle;
+      const color = getGraphColor(segment.label);
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      startAngle = endAngle;
+
+      const legendItem = document.createElement('div');
+      legendItem.className = 'graph-legend-item';
+      const dot = document.createElement('span');
+      dot.className = 'legend-dot';
+      dot.style.background = color;
+      const percent = Math.round((segment.value/total)*1000)/10;
+      const label = document.createElement('span');
+      label.textContent = `${segment.label} · ${percent}%`;
+      legendItem.appendChild(dot);
+      legendItem.appendChild(label);
+      graphLegendEl.appendChild(legendItem);
+    });
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, innerRadius, 0, Math.PI*2);
+    const bodyStyles = window.getComputedStyle(document.body);
+    ctx.fillStyle = bodyStyles.getPropertyValue('background-color') || 'rgba(15,16,36,0.9)';
+    ctx.fill();
+
+    const textColor = bodyStyles.getPropertyValue('color') || '#fff';
+    ctx.fillStyle = textColor;
+    ctx.font = `${14*(window.devicePixelRatio||1)}px ${bodyStyles.getPropertyValue('font-family')}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(graphType==='income'?'Income':'Expense', centerX, centerY - 8);
+    ctx.font = `${12*(window.devicePixelRatio||1)}px ${getComputedStyle(document.body).fontFamily}`;
+    ctx.fillText(graphGrouping==='name'?'By names':'By categories', centerX, centerY + 8);
+  }
+  function isLandscapeMode(){
+    return window.innerWidth > window.innerHeight + 80;
+  }
+  function showGraphScreen(){
+    if(!graphScreen) return;
+    if(graphScreen.hidden){
+      previousNonGraphScreen = currentScreen;
+    }
+    homeScreen.classList.remove('active');
+    homeScreen.hidden = true;
+    historyScreen.classList.remove('active');
+    historyScreen.hidden = true;
+    graphScreen.hidden = false;
+    graphScreen.classList.add('active');
+    resizeGraphCanvas();
+    updateGraphTypeButtons();
+    renderGraph();
+  }
+  function hideGraphScreen(){
+    if(!graphScreen || graphScreen.hidden) return;
+    graphScreen.hidden = true;
+    graphScreen.classList.remove('active');
+    if(previousNonGraphScreen === 'history'){
+      historyScreen.hidden = false;
+      historyScreen.classList.add('active');
+      homeScreen.hidden = true;
+      homeScreen.classList.remove('active');
+      currentScreen = 'history';
+    } else {
+      homeScreen.hidden = false;
+      homeScreen.classList.add('active');
+      historyScreen.hidden = true;
+      historyScreen.classList.remove('active');
+      currentScreen = 'home';
+    }
+  }
+  function syncGraphScreenVisibility(){
+    if(!graphScreen) return;
+    const landscape = isLandscapeMode();
+    if(landscape){
+      showGraphScreen();
+    } else if(!landscape && !graphScreen.hidden){
+      hideGraphScreen();
+    }
+  }
+  function refreshGraphIfVisible(){
+    if(graphScreen && !graphScreen.hidden){
+      renderGraph();
     }
   }
   function toLocalInputValue(timestamp){
@@ -615,6 +780,7 @@
     syncSettingsUI();
     updateSeasonalStats();
     scheduleLocalBackup('import-data');
+    refreshGraphIfVisible();
   }
 
   function renderSheetSuggestions(kind){
@@ -1262,6 +1428,7 @@
       renderRecent();
       if(!historyScreen.hidden) renderHistory(); 
       updateSeasonalStats();
+      refreshGraphIfVisible();
       scheduleLocalBackup('add-transaction');
     }).catch(err=>{
       console.error('Error adding transaction:', err);
@@ -1302,6 +1469,7 @@
       renderRecent();
       if(!historyScreen.hidden) renderHistory();
       updateSeasonalStats();
+      refreshGraphIfVisible();
       scheduleLocalBackup('edit-transaction');
     }).catch(err=>{
       console.error('Error updating transaction:', err);
@@ -1315,6 +1483,7 @@
       renderHistory();
       renderRecent();
       updateSeasonalStats();
+      refreshGraphIfVisible();
       scheduleLocalBackup('delete-transaction');
     });
   }
@@ -1330,14 +1499,18 @@
     homeScreen.hidden=true; 
     historyScreen.hidden=false; 
     historyScreen.classList.add('active'); 
+    currentScreen = 'history';
     renderHistory(); 
+    syncGraphScreenVisibility();
   });
   $('#btnHome').addEventListener('click',()=>{ 
     historyScreen.classList.remove('active'); 
     historyScreen.hidden=true; 
     homeScreen.hidden=false; 
     homeScreen.classList.add('active'); 
+    currentScreen = 'home';
     renderRecent();
+    syncGraphScreenVisibility();
   });
   toggleNoteBtn.addEventListener('click',()=>{
     if(noteContainer.hidden){
@@ -1425,6 +1598,24 @@
   if(nameSuggestionsEl) nameSuggestionsEl.addEventListener('click',handleSuggestionClick);
   attachLongPressHandlers(categorySuggestionsEl,'.suggestion-chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
   attachLongPressHandlers(nameSuggestionsEl,'.suggestion-chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
+  if(graphTypeFiltersEl){
+    graphTypeFiltersEl.addEventListener('click',e=>{
+      const btn = e.target.closest('.graph-type-pill');
+      if(!btn) return;
+      const next = btn.dataset.graphType || 'expense';
+      if(next === graphType) return;
+      graphType = next;
+      updateGraphTypeButtons();
+      renderGraph();
+    });
+  }
+  graphGroupInputs.forEach(input=>{
+    input.addEventListener('change',()=>{
+      if(!input.checked) return;
+      graphGrouping = input.value === 'name' ? 'name' : 'category';
+      renderGraph();
+    });
+  });
   function handleConfirm(e){
     if(e) e.preventDefault();
     if(confirmBtn.disabled) return;
@@ -1570,7 +1761,9 @@
       homeScreen.hidden = true;
       historyScreen.hidden = false;
       historyScreen.classList.add('active');
+      currentScreen = 'history';
       renderHistory();
+      syncGraphScreenVisibility();
     });
   });
 
@@ -1619,6 +1812,7 @@
         updateSeasonalStats();
         closeSettings();
         scheduleLocalBackup('clear-data');
+        refreshGraphIfVisible();
       });
     }).catch(err=>{
       console.error('Error clearing data', err);
@@ -1725,4 +1919,19 @@
     if(tgt && tgt.closest && tgt.closest('input, textarea, .text-input')) return;
     e.preventDefault();
   });
+
+  window.addEventListener('resize', ()=>{
+    resizeGraphCanvas();
+    syncGraphScreenVisibility();
+    if(graphScreen && !graphScreen.hidden) renderGraph();
+  });
+  window.addEventListener('orientationchange', ()=>{
+    setTimeout(()=>{
+      resizeGraphCanvas();
+      syncGraphScreenVisibility();
+    }, 150);
+  });
+  updateGraphTypeButtons();
+  resizeGraphCanvas();
+  syncGraphScreenVisibility();
 })();
