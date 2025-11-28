@@ -676,14 +676,15 @@
   }
 
   const LONG_PRESS_MS = 600;
+  const GROUP_DELETE_LONG_PRESS_MS = 3000;
   const longPressTimers = new WeakMap();
-  function scheduleLongPress(target, handler){
+  function scheduleLongPress(target, handler, delay){
     clearLongPress(target);
     const timer = setTimeout(()=>{
       longPressTimers.delete(target);
       target.dataset.skipNextClick = '1';
       if(typeof handler === 'function') handler(target);
-    }, LONG_PRESS_MS);
+    }, typeof delay === 'number' ? delay : LONG_PRESS_MS);
     longPressTimers.set(target,timer);
   }
   function clearLongPress(target){
@@ -693,7 +694,7 @@
       longPressTimers.delete(target);
     }
   }
-  function attachLongPressHandlers(container, selector, handler = handleGroupLongPress){
+  function attachLongPressHandlers(container, selector, handler = handleGroupLongPress, delay = LONG_PRESS_MS){
     if(!container) return;
     const start = e=>{
       if(e.type==='mousedown' && e.button!==0) return;
@@ -701,7 +702,7 @@
       if(!btn) return;
       if(handler === handleGroupLongPress && !btn.dataset.value) return;
       btn.dataset.skipNextClick = '0';
-      scheduleLongPress(btn, handler);
+      scheduleLongPress(btn, handler, delay);
     };
     const cancel = e=>{
       const btn = e.target.closest(selector);
@@ -933,6 +934,9 @@
       const editBtn = document.createElement('button');
       editBtn.type='button';
       editBtn.className='edit-btn';
+      if(t.note){
+        editBtn.classList.add('note-outline');
+      }
       editBtn.setAttribute('aria-label','Edit transaction');
       editBtn.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z'/></svg>";
       editBtn.addEventListener('click',e=>{
@@ -1398,8 +1402,8 @@
   }
   if(categoryChipRow) categoryChipRow.addEventListener('click',handleChipRowClick);
   if(nameChipRow) nameChipRow.addEventListener('click',handleChipRowClick);
-  attachLongPressHandlers(categoryChipRow,'.chip');
-  attachLongPressHandlers(nameChipRow,'.chip');
+  attachLongPressHandlers(categoryChipRow,'.chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
+  attachLongPressHandlers(nameChipRow,'.chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
   attachLongPressHandlers(recentListEl,'.recent-item', handleRecentCardLongPress);
   function handleSuggestionClick(e){
     const btn = e.target.closest('.suggestion-chip');
@@ -1419,8 +1423,8 @@
   }
   if(categorySuggestionsEl) categorySuggestionsEl.addEventListener('click',handleSuggestionClick);
   if(nameSuggestionsEl) nameSuggestionsEl.addEventListener('click',handleSuggestionClick);
-  attachLongPressHandlers(categorySuggestionsEl,'.suggestion-chip');
-  attachLongPressHandlers(nameSuggestionsEl,'.suggestion-chip');
+  attachLongPressHandlers(categorySuggestionsEl,'.suggestion-chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
+  attachLongPressHandlers(nameSuggestionsEl,'.suggestion-chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
   function handleConfirm(e){
     if(e) e.preventDefault();
     if(confirmBtn.disabled) return;

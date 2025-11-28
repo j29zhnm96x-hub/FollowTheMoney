@@ -59,25 +59,24 @@
     const todayStart = startOfDay(now.getTime());
     const todayEnd = todayStart + 86400000 - 1;
 
-    // Week: last 7 days including today
-    const weekStart = addDays(todayStart, -6);
+    const dayOfWeek = (now.getDay() + 6) % 7; // 0 = Monday
+    const weekStart = startOfDay(addDays(todayStart, -dayOfWeek));
+    const weekEnd = weekStart + (7 * 86400000) - 1;
 
-    // Month: current calendar month
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth()+1, 1).getTime();
+    const monthEnd = nextMonthStart - 1;
 
-    const dailySpent = transactions
-      .filter(t => t.amountCents < 0 && t.createdAt >= todayStart && t.createdAt <= todayEnd)
-      .reduce((a,t)=> a + Math.abs(t.amountCents), 0);
+    const spendReducer = (rangeStart, rangeEnd)=>
+      transactions
+        .filter(t => t.amountCents < 0 && t.createdAt >= rangeStart && t.createdAt <= rangeEnd)
+        .reduce((a,t)=> a + Math.abs(t.amountCents), 0);
 
-    const weeklySpent = transactions
-      .filter(t => t.amountCents < 0 && t.createdAt >= weekStart && t.createdAt <= todayEnd)
-      .reduce((a,t)=> a + Math.abs(t.amountCents), 0);
-
-    const monthlySpent = transactions
-      .filter(t => t.amountCents < 0 && t.createdAt >= monthStart && t.createdAt <= todayEnd)
-      .reduce((a,t)=> a + Math.abs(t.amountCents), 0);
-
-    return { dailySpent, weeklySpent, monthlySpent };
+    return {
+      dailySpent: spendReducer(todayStart, todayEnd),
+      weeklySpent: spendReducer(weekStart, weekEnd),
+      monthlySpent: spendReducer(monthStart, monthEnd)
+    };
   }
 
   function computeAllowances(settings, transactions, nowTs){
