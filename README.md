@@ -1,0 +1,45 @@
+# FollowTheMoney
+
+Ultra-fast offline money tracker PWA built with vanilla HTML, CSS, and JavaScript.
+
+## Features
+- 💰 Track income and expenses with ease
+- 📊 View transaction history with swipe-to-delete
+- 🔄 Monthly recurring income automation
+- 💾 Offline-first with IndexedDB storage
+- 📱 Installable as PWA on any device
+- 🌓 Automatic dark/light mode support
+
+## Quick Start
+Just open `index.html` in any modern browser. No build process required!
+
+## Deploy
+Upload all files to any static hosting:
+- GitHub Pages
+- Netlify
+- Vercel
+- Any web server
+
+## Files
+- `index.html` - Main app page
+- `styles.css` - All styling
+- `app.js` - Logic and IndexedDB
+- `manifest.json` - PWA configuration
+- `service-worker.js` - Offline caching
+- `favicon.ico` - App icon
+
+## iPhone Installation
+1. Open in Safari
+2. Tap Share button
+3. Select "Add to Home Screen"
+4. Enjoy offline access!
+
+## Browser Support
+Works on all modern browsers with IndexedDB and Service Worker support:
+- Chrome/Edge 80+
+- Safari 13+
+- Firefox 75+
+- Mobile browsers
+
+---
+Made with ❤️ for simple money tracking

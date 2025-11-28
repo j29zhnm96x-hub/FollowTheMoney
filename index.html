@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FollowTheMoney</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FollowTheMoney">
+  <meta name="theme-color" content="#000000">
+  <link rel="apple-touch-icon" sizes="180x180" href="img/favicon.png?v=2">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="180x180" href="img/favicon.png?v=2">
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="app">
+    <section id="screen-home" class="screen active" aria-label="Home">
+      <header class="top-bar">
+        <button id="btnHistory" class="pill accent" aria-label="History">History</button>
+        <h1 class="logo">FollowTheMoney</h1>
+        <button id="btnSettings" class="pill accent" aria-label="Settings">⚙</button>
+      </header>
+      <main class="center-stack">
+        <div class="balance-label">Balance <span id="seasonBadge" class="badge" hidden>Off-season</span></div>
+        <div id="balance" class="balance" aria-label="Balance">0.00 €</div>
+        <div id="dashboardGrid" class="dashboard-grid" hidden>
+          <div class="dashboard-card" data-period="day">
+            <div class="card-label">Daily</div>
+            <div id="dailyAllowance" class="card-allowance">0.00 €</div>
+            <div id="dailySpent" class="card-spent">0.00 €</div>
+          </div>
+          <div class="dashboard-card" data-period="week">
+            <div class="card-label">Weekly</div>
+            <div id="weeklyAllowance" class="card-allowance">0.00 €</div>
+            <div id="weeklySpent" class="card-spent">0.00 €</div>
+          </div>
+          <div class="dashboard-card" data-period="month">
+            <div class="card-label">Monthly</div>
+            <div id="monthlyAllowance" class="card-allowance">0.00 €</div>
+            <div id="monthlySpent" class="card-spent">0.00 €</div>
+          </div>
+        </div>
+        <div id="recentList" class="recent-list" aria-label="Recent transactions"></div>
+      </main>
+      <div class="float-buttons">
+        <button id="btnAddIncome" class="circle income" aria-label="Add income"></button>
+        <button id="btnAddExpense" class="circle expense" aria-label="Add expense"></button>
+      </div>
+    </section>
+    <section id="screen-history" class="screen" aria-label="History" hidden>
+      <header class="top-bar">
+        <button id="btnHome" class="pill accent" aria-label="Home">Home</button>
+        <h1 class="logo">History</h1>
+        <div class="pill ghost hidden-placeholder">•</div>
+      </header>
+      <div id="historyTypeFilters" class="type-filters" role="group" aria-label="Type filters">
+        <button class="type-pill" data-type="income">Income</button>
+        <button class="type-pill" data-type="all">All</button>
+        <button class="type-pill" data-type="expense">Expense</button>
+      </div>
+      <div id="historyFilter" class="history-filter" hidden></div>
+      <div class="chip-row" id="categoryChipRow" aria-label="Categories"></div>
+      <div class="chip-row" id="nameChipRow" aria-label="Names"></div>
+      <div id="historyGroupSummary" class="group-summary" hidden></div>
+      <main class="history-list" id="historyList" aria-live="polite"></main>
+    </section>
+    <div id="settingsModal" class="modal" hidden>
+      <div class="modal-overlay" data-dismiss></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-label="Settings">
+        <div class="settings-header">
+          <h2>Settings</h2>
+          <label class="toggle-row switch inline-switch">
+            <input type="checkbox" id="themeToggle">
+            <span class="switch-ui" aria-hidden="true"><span class="switch-thumb"></span></span>
+            <span class="theme-label">Light</span>
+          </label>
+        </div>
+        <div class="settings-body">
+          <div class="settings-grid">
+            <section class="settings-card" aria-labelledby="generalHeading">
+              <div>
+                <h3 id="generalHeading">General</h3>
+                <p class="card-subtitle">Choose how dates appear across the app.</p>
+              </div>
+              <div class="setting-row">
+                <label for="dateFormat" class="small-label">Date format</label>
+                <select id="dateFormat" class="text-input select-input">
+                  <option value="dmy">Day / Month / Year</option>
+                  <option value="mdy">Month / Day / Year</option>
+                  <option value="ymd">Year / Month / Day</option>
+                </select>
+                <div class="preview small">Applies to recent cards and history.</div>
+              </div>
+              <div class="setting-row">
+                <label for="currencySymbol" class="small-label">Currency symbol</label>
+                <input id="currencySymbol" type="text" class="text-input" maxlength="3" placeholder="€" />
+                <div class="preview small">Shown after every amount (e.g. €, $, Kč).</div>
+              </div>
+            </section>
+            <section class="settings-card" aria-labelledby="seasonHeading">
+              <div>
+                <h3 id="seasonHeading">Seasonal Budget</h3>
+                <p class="card-subtitle">Set the working season so the app can guide off-season spending.</p>
+              </div>
+              <div class="setting-row">
+                <label for="seasonStart" class="small-label">Start of working season</label>
+                <input id="seasonStart" type="date" class="text-input date-compact" />
+              </div>
+              <div class="setting-row">
+                <label for="seasonEnd" class="small-label">End of working season</label>
+                <input id="seasonEnd" type="date" class="text-input date-compact" />
+              </div>
+              <button id="saveSeason" class="btn accent" disabled>Save Season Dates</button>
+              <div class="setting-row">
+                <div id="seasonInfo" class="preview small"></div>
+                <div id="allowanceInfo" class="preview small"></div>
+              </div>
+            </section>
+            <section class="settings-card" aria-labelledby="privacyHeading">
+              <div>
+                <h3 id="privacyHeading">History lock</h3>
+                <p class="card-subtitle">Prevent accidental swipes from deleting entries.</p>
+              </div>
+              <label class="toggle-row switch">
+                <input type="checkbox" id="historyLockToggle">
+                <span class="switch-ui" aria-hidden="true"><span class="switch-thumb"></span></span>
+                <span>Lock swipe-to-delete</span>
+              </label>
+              <div class="preview small">You can still edit entries using the pencil icon.</div>
+            </section>
+            <section class="settings-card" aria-labelledby="dataHeading">
+              <div>
+                <h3 id="dataHeading">Data export & import</h3>
+                <p class="card-subtitle">Back up everything and move between devices.</p>
+              </div>
+              <div class="setting-row">
+                <button id="btnExportShare" class="btn accent full">Share backup</button>
+                <div class="preview small">Uses the OS share sheet when available.</div>
+              </div>
+              <div class="setting-row">
+                <button id="btnExportEmail" class="btn ghost full">Email backup</button>
+                <div class="preview small">Copies the backup and opens your mail app.</div>
+              </div>
+              <div class="setting-row">
+                <button id="btnImportData" class="btn ghost full">Import backup</button>
+                <div class="preview small">Select a saved .json backup file to restore.</div>
+                <input id="importFile" type="file" accept="application/json" hidden />
+              </div>
+            </section>
+            <section class="settings-card" aria-labelledby="advancedHeading">
+              <div>
+                <h3 id="advancedHeading">Advanced</h3>
+                <p class="card-subtitle">Reset the app if you need a clean slate.</p>
+              </div>
+              <div class="advanced-group">
+                <button id="btnClearAll" class="btn danger">Clear All Data</button>
+                <div class="preview small">Clears all transactions and resets settings. A confirmation will appear when you press the button.</div>
+              </div>
+            </section>
+          </div>
+          <div class="settings-actions">
+            <button class="btn ghost full" data-dismiss>Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="sheet" class="sheet" hidden>
+      <div class="sheet-overlay" data-dismiss></div>
+      <div class="sheet-panel" aria-label="Amount entry" role="dialog">
+        <div class="sheet-grabber"></div>
+        <div id="sheetAmount" class="amount-display">0.00 €</div>
+        <input id="rawDigits" type="tel" inputmode="numeric" class="hidden-input" />
+        <div id="categoryContainer" class="category-container" hidden>
+          <label for="categoryInput" class="small-label">Category</label>
+          <input id="categoryInput" type="text" class="text-input" list="categoryList" placeholder="Select or type category" autocomplete="off" />
+          <datalist id="categoryList"></datalist>
+          <div id="categorySuggestions" class="suggestion-row" hidden></div>
+        </div>
+        <div id="nameContainer" class="name-container" hidden>
+          <label for="nameInput" class="small-label">Name</label>
+          <input id="nameInput" type="text" class="text-input" list="nameList" placeholder="Name" autocomplete="off" disabled />
+          <datalist id="nameList"></datalist>
+          <div id="nameSuggestions" class="suggestion-row" hidden></div>
+        </div>
+        <div id="noteContainer" class="note-container" hidden>
+          <textarea id="noteInput" placeholder="Note (optional)"></textarea>
+        </div>
+        <button id="toggleNote" class="btn ghost full">Add note</button>
+        <div id="editDateContainer" class="date-edit" hidden>
+          <label for="editDateInput" class="small-label">Transaction date & time</label>
+          <input id="editDateInput" type="datetime-local" class="text-input" />
+          <div class="preview small">Adjust this when editing to backdate entries.</div>
+        </div>
+        <button id="confirmBtn" class="btn primary full" disabled>Add</button>
+      </div>
+    </div>
+  </div>
+  <script src="seasonal.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>

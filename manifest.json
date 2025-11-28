@@ -1,0 +1,24 @@
+{
+  "name": "FollowTheMoney",
+  "short_name": "FTM",
+  "display": "standalone",
+  "start_url": "./",
+  "scope": "./",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "description": "Ultra-fast offline money tracker",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.ico?v=2",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "img/favicon.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
