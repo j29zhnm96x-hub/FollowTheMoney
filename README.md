@@ -7,6 +7,7 @@ Ultra-fast offline money tracker PWA built with vanilla HTML, CSS, and JavaScrip
 - 📊 View transaction history with swipe-to-delete
 - 🔄 Monthly recurring income automation
 - 💾 Offline-first with IndexedDB storage
+- 🛡️ Automatic local backups protect data during updates
 - 📱 Installable as PWA on any device
 - 🌓 Automatic dark/light mode support
 
@@ -23,10 +24,13 @@ Upload all files to any static hosting:
 ## Files
 - `index.html` - Main app page
 - `styles.css` - All styling
-- `app.js` - Logic and IndexedDB
+- `app.js` - Logic, IndexedDB, and backup safeguards
 - `manifest.json` - PWA configuration
-- `service-worker.js` - Offline caching
+- `sw.js` - Offline caching & asset updates
 - `favicon.ico` - App icon
+
+## Data Safety
+The app now mirrors every change to a lightweight local backup so even if the PWA updates or IndexedDB is unavailable, your transactions and settings are restored instantly. A smarter service worker also waits for the backup flush before swapping versions, preventing refresh-related data loss.
 
 ## iPhone Installation
 1. Open in Safari

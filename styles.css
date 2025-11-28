@@ -79,6 +79,7 @@ html, body, .app, .screen, .top-bar, .transaction, .recent-item, .balance, .logo
 .dashboard-card .card-allowance { color:var(--income); font-size:.85rem; font-weight:800; text-align:center; word-break:break-word; }
 .dashboard-card .card-spent { color:var(--expense); font-size:.85rem; font-weight:800; text-align:center; word-break:break-word; }
 .recent-item { background:var(--panel); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:1px solid var(--panel-border); border-radius:14px; padding:.5rem .75rem; display:flex; align-items:center; justify-content:space-between; font-size:.95rem; gap:.6rem; }
+.recent-item.press-flash { animation:recentPressFlash .22s ease-out; }
 .recent-item .r-title { font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:0.95; }
 .recent-item .r-meta { font-size:.75rem; opacity:0.55; margin-left:.5rem; }
 .recent-item .r-amt { font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
@@ -101,6 +102,7 @@ html, body, .app, .screen, .top-bar, .transaction, .recent-item, .balance, .logo
 .edit-btn:active { transform:scale(.92); }
 .theme-light .edit-btn { background:rgba(0,0,0,.08); }
 .swipe-delete { position:absolute; inset:0; display:flex; justify-content:flex-end; align-items:center; padding-right:1.25rem; font-weight:700; color:var(--expense); pointer-events:none; }
+.transaction.flash-highlight { animation:historyFlash .75s ease-out 2; }
 .modal { position:fixed; inset:0; z-index:50; animation:fadeIn .25s ease; }
 .modal-overlay { position:absolute; inset:0; background:rgba(0,0,0,.65); cursor:pointer; }
 .modal-panel { position:absolute; top:5rem; left:1.25rem; right:1.25rem; max-width:500px; margin:0 auto; background:var(--modal-bg); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); border:1px solid var(--panel-border); border-radius:var(--radius-xl); padding:1.5rem 1.4rem 2rem; display:flex; flex-direction:column; gap:1.2rem; box-shadow:0 20px 60px rgba(0,0,0,.6); animation:slideUp .3s cubic-bezier(.4,0,.2,1); max-height:calc(90vh - 4rem); overflow-y:auto; }
@@ -216,6 +218,16 @@ html.theme-light .group-summary { box-shadow:0 12px 28px rgba(0,0,0,.12); }
 .hidden-input { position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
 .fade-in { animation:fade .3s ease; }
 @keyframes fade { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
+@keyframes historyFlash {
+  0%, 100% { box-shadow:0 0 0 0 rgba(101,128,255,0); }
+  25%, 75% { box-shadow:0 0 0 6px rgba(101,128,255,0.45); }
+  50% { box-shadow:0 0 0 0 rgba(101,128,255,0); }
+}
+@keyframes recentPressFlash {
+  0% { transform:scale(1); box-shadow:0 0 0 0 rgba(255,255,255,0); }
+  50% { transform:scale(0.97); box-shadow:0 0 0 6px rgba(255,255,255,0.18); }
+  100% { transform:scale(1); box-shadow:0 0 0 0 rgba(255,255,255,0); }
+}
 .empty { text-align:center; padding:4rem 2rem 2rem; opacity:.5; font-size:.95rem; }
 /* Small visual for toggle label spacing (keeps aligned with other toggles) */
 .toggle-row input[type=checkbox] { margin-right: .6rem; }

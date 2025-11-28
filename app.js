@@ -78,12 +78,82 @@
     incomeNames: [],
     expenseNames: []
   };
+  let pendingHistoryHighlightId = null;
 
   // IndexedDB setup
   const DB_NAME = 'followthemoney_plain';
   const TX_STORE = 'transactions';
   const SETTINGS_STORE = 'settings';
   let db;
+  const LOCAL_BACKUP_KEY = 'ftm_offline_backup_v1';
+  const UPDATE_FLAG_KEY = 'ftm_pending_sw_swap';
+  let backupWriteTimer = null;
+
+  function readLocalBackup(){
+    if(typeof localStorage === 'undefined') return null;
+    try{
+      const raw = localStorage.getItem(LOCAL_BACKUP_KEY);
+      if(!raw) return null;
+      const parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== 'object') return null;
+      if(parsed.transactions && !Array.isArray(parsed.transactions)) parsed.transactions = [];
+      if(parsed.settings && typeof parsed.settings !== 'object') parsed.settings = null;
+      return parsed;
+    }catch(err){
+      console.warn('Local backup read failed', err);
+      return null;
+    }
+  }
+  function persistLocalBackup(reason){
+    if(typeof localStorage === 'undefined') return;
+    try{
+      const payload = {
+        version: 1,
+        reason: reason || 'auto',
+        savedAt: Date.now(),
+        transactions: transactions.map(t=>({ ...t })),
+        settings: { ...settings }
+      };
+      localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(payload));
+    }catch(err){
+      console.warn('Local backup write failed', err);
+    }
+  }
+  function scheduleLocalBackup(reason){
+    if(backupWriteTimer) clearTimeout(backupWriteTimer);
+    backupWriteTimer = setTimeout(()=>{
+      backupWriteTimer = null;
+      persistLocalBackup(reason);
+    }, 150);
+  }
+  function flushLocalBackup(reason){
+    if(backupWriteTimer){
+      clearTimeout(backupWriteTimer);
+      backupWriteTimer = null;
+    }
+    if(typeof localStorage === 'undefined') return;
+    persistLocalBackup(reason);
+  }
+  function applyBackupSnapshot(snapshot, options={}){
+    if(!snapshot) return;
+    const { silent=false } = options;
+    let changed = false;
+    if(Array.isArray(snapshot.transactions)){
+      transactions = snapshot.transactions.map(t=>({ ...t }));
+      changed = true;
+    }
+    if(snapshot.settings && typeof snapshot.settings === 'object'){
+      settings = { ...settings, ...snapshot.settings };
+      normalizeCollections();
+      changed = true;
+    }
+    if(changed && !silent){
+      updateBalance();
+      renderRecent();
+      if(!historyScreen.hidden) renderHistory();
+      syncSettingsUI();
+    }
+  }
 
   function openDB(){
     return new Promise((resolve,reject)=>{
@@ -113,6 +183,7 @@
     });
   }
   function dbAddTransaction(t){
+    if(!db) return Promise.resolve();
     return new Promise((resolve,reject)=>{
       const tx = db.transaction(TX_STORE,'readwrite');
       tx.objectStore(TX_STORE).put(t);
@@ -121,6 +192,7 @@
     });
   }
   function dbDeleteTransaction(id){
+    if(!db) return Promise.resolve();
     return new Promise((resolve,reject)=>{
       const tx = db.transaction(TX_STORE,'readwrite');
       tx.objectStore(TX_STORE).delete(id);
@@ -152,10 +224,14 @@
     });
   }
   function dbSaveSettings(s){
+    if(!db){
+      scheduleLocalBackup('settings-local-only');
+      return Promise.resolve();
+    }
     return new Promise((resolve,reject)=>{
       const tx = db.transaction(SETTINGS_STORE,'readwrite');
       tx.objectStore(SETTINGS_STORE).put({ ...s, id:'settings' });
-      tx.oncomplete = ()=> resolve();
+      tx.oncomplete = ()=>{ scheduleLocalBackup('settings-save'); resolve(); };
       tx.onerror = ()=> reject(tx.error);
     });
   }
@@ -204,6 +280,22 @@
     if(!includeTime) return datePart;
     const timePart = `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
     return `${datePart} ${timePart}`;
+  }
+  function formatShortDate(timestamp){
+    const date = new Date(timestamp);
+    if(Number.isNaN(date)) return '';
+    const day = pad2(date.getDate());
+    const month = pad2(date.getMonth()+1);
+    const yearShort = String(date.getFullYear()).slice(-2);
+    const format = (settings && settings.dateFormat) ? settings.dateFormat : 'dmy';
+    switch(format){
+      case 'mdy':
+        return `${month}/${day}/${yearShort}`;
+      case 'ymd':
+        return `${yearShort}-${month}-${day}`;
+      default:
+        return `${day}/${month}/${yearShort}`;
+    }
   }
   function toLocalInputValue(timestamp){
     const date = new Date(timestamp);
@@ -441,6 +533,7 @@
     return next;
   }
   function replaceAllTransactions(newList){
+    if(!db) return Promise.resolve();
     return new Promise((resolve,reject)=>{
       const tx = db.transaction(TX_STORE,'readwrite');
       const store = tx.objectStore(TX_STORE);
@@ -521,6 +614,7 @@
     if(!historyScreen.hidden) renderHistory();
     syncSettingsUI();
     updateSeasonalStats();
+    scheduleLocalBackup('import-data');
   }
 
   function renderSheetSuggestions(kind){
@@ -583,12 +677,12 @@
 
   const LONG_PRESS_MS = 600;
   const longPressTimers = new WeakMap();
-  function scheduleLongPress(target){
+  function scheduleLongPress(target, handler){
     clearLongPress(target);
     const timer = setTimeout(()=>{
       longPressTimers.delete(target);
       target.dataset.skipNextClick = '1';
-      handleGroupLongPress(target);
+      if(typeof handler === 'function') handler(target);
     }, LONG_PRESS_MS);
     longPressTimers.set(target,timer);
   }
@@ -599,16 +693,15 @@
       longPressTimers.delete(target);
     }
   }
-  function attachLongPressHandlers(container, selector){
+  function attachLongPressHandlers(container, selector, handler = handleGroupLongPress){
     if(!container) return;
     const start = e=>{
       if(e.type==='mousedown' && e.button!==0) return;
       const btn = e.target.closest(selector);
       if(!btn) return;
-      const value = btn.dataset.value;
-      if(!value) return; // skip "All" chips
+      if(handler === handleGroupLongPress && !btn.dataset.value) return;
       btn.dataset.skipNextClick = '0';
-      scheduleLongPress(btn);
+      scheduleLongPress(btn, handler);
     };
     const cancel = e=>{
       const btn = e.target.closest(selector);
@@ -654,6 +747,45 @@
       });
   }
 
+  function handleRecentCardLongPress(target){
+    const txId = target.dataset.txId;
+    if(!txId) return;
+    pendingHistoryHighlightId = txId;
+    const proceedToHistory = ()=>{
+      historyFilter = null;
+      historyCategoryFilter = null;
+      historyNameFilter = null;
+      historyTypeFilter = 'all';
+      refreshCategoryOptions();
+      refreshNameOptions();
+      renderFilterChips();
+      homeScreen.classList.remove('active');
+      homeScreen.hidden = true;
+      historyScreen.hidden = false;
+      historyScreen.classList.add('active');
+      renderHistory();
+    };
+
+    const triggerNavigation = (()=>{
+      let done = false;
+      return ()=>{
+        if(done) return;
+        done = true;
+        target.classList.remove('press-flash');
+        proceedToHistory();
+      };
+    })();
+
+    target.classList.add('press-flash');
+    const handleAnimationEnd = e=>{
+      if(e && e.animationName !== 'recentPressFlash') return;
+      target.removeEventListener('animationend', handleAnimationEnd);
+      triggerNavigation();
+    };
+    target.addEventListener('animationend', handleAnimationEnd);
+    setTimeout(triggerNavigation, 220);
+  }
+
   function updateBalance(){
     const total = transactions.reduce((a,t)=>a+t.amountCents,0);
     balanceEl.textContent = formatCurrency(total);
@@ -669,13 +801,17 @@
       const e = document.createElement('div'); e.className='empty'; e.textContent='No recent entries'; recentListEl.appendChild(e); return;
     }
     list.forEach(t=>{
-      const row = document.createElement('div'); row.className='recent-item';
+      const row = document.createElement('div');
+      row.className='recent-item';
+      row.dataset.txId = t.id;
       const left = document.createElement('div'); left.style.display='flex'; left.style.alignItems='center'; left.style.gap='0.5rem'; left.style.minWidth='0';
       const title = document.createElement('div');
       title.className='r-title';
       const displayName = buildEntryLabel(t);
       title.textContent = displayName;
-      const meta = document.createElement('div'); meta.className='r-meta'; meta.textContent = formatDateTime(t.createdAt,false);
+      const meta = document.createElement('div');
+      meta.className='r-meta';
+      meta.textContent = formatShortDate(t.createdAt);
       left.appendChild(title); left.appendChild(meta);
       const amt = document.createElement('div'); amt.className = 'r-amt ' + (t.amountCents>0?'amount-pos':'amount-neg'); amt.textContent = formatCurrency(Math.abs(t.amountCents));
       row.appendChild(left); row.appendChild(amt);
@@ -850,6 +986,21 @@
 
       historyList.appendChild(wrap);
     });
+
+    if(pendingHistoryHighlightId){
+      const highlightEl = historyList.querySelector(`.transaction[data-id="${pendingHistoryHighlightId}"]`);
+      if(highlightEl){
+        const removeAfterAnimation = e=>{
+          if(e && e.animationName !== 'historyFlash') return;
+          highlightEl.removeEventListener('animationend', removeAfterAnimation);
+          highlightEl.classList.remove('flash-highlight');
+        };
+        highlightEl.addEventListener('animationend', removeAfterAnimation);
+        highlightEl.classList.add('flash-highlight');
+        highlightEl.scrollIntoView({ behavior:'smooth', block:'center' });
+      }
+      pendingHistoryHighlightId = null;
+    }
   }
 
   function startEditingTransaction(tx){
@@ -1110,6 +1261,7 @@
       renderRecent();
       if(!historyScreen.hidden) renderHistory(); 
       updateSeasonalStats();
+      scheduleLocalBackup('add-transaction');
     }).catch(err=>{
       console.error('Error adding transaction:', err);
     });
@@ -1149,15 +1301,22 @@
       renderRecent();
       if(!historyScreen.hidden) renderHistory();
       updateSeasonalStats();
+      scheduleLocalBackup('edit-transaction');
     }).catch(err=>{
       console.error('Error updating transaction:', err);
     });
   }
 
-  function deleteTx(id){ dbDeleteTransaction(id).then(()=>{ transactions = transactions.filter(t=>t.id!==id); updateBalance(); renderHistory(); }); }
-
-  // update recent list when deleting
-  function deleteTx(id){ return dbDeleteTransaction(id).then(()=>{ transactions = transactions.filter(t=>t.id!==id); updateBalance(); renderHistory(); renderRecent(); updateSeasonalStats(); }); }
+  function deleteTx(id){
+    return dbDeleteTransaction(id).then(()=>{
+      transactions = transactions.filter(t=>t.id!==id);
+      updateBalance();
+      renderHistory();
+      renderRecent();
+      updateSeasonalStats();
+      scheduleLocalBackup('delete-transaction');
+    });
+  }
 
   // Event bindings
   $('#btnAddIncome').addEventListener('click',()=>openSheet('income'));
@@ -1244,6 +1403,7 @@
   if(nameChipRow) nameChipRow.addEventListener('click',handleChipRowClick);
   attachLongPressHandlers(categoryChipRow,'.chip');
   attachLongPressHandlers(nameChipRow,'.chip');
+  attachLongPressHandlers(recentListEl,'.recent-item', handleRecentCardLongPress);
   function handleSuggestionClick(e){
     const btn = e.target.closest('.suggestion-chip');
     if(!btn) return;
@@ -1452,7 +1612,12 @@
         expenseNames: []
       };
       dbSaveSettings(settings).then(()=>{
-        updateBalance(); renderHistory(); syncSettingsUI(); updateSeasonalStats(); closeSettings();
+        updateBalance();
+        renderHistory();
+        syncSettingsUI();
+        updateSeasonalStats();
+        closeSettings();
+        scheduleLocalBackup('clear-data');
       });
     }).catch(err=>{
       console.error('Error clearing data', err);
@@ -1467,16 +1632,62 @@
     }
   });
 
+  const warmBackup = readLocalBackup();
+  if(warmBackup){
+    applyBackupSnapshot(warmBackup);
+  } else {
+    renderRecent();
+  }
+
   // Init
   openDB().then(d=>{ db=d; return Promise.all([dbGetAllTransactions(), dbGetSettings()]); })
     .then(([txs,s])=>{ transactions=txs; settings={...settings,...s}; updateBalance(); applyRecurringIfNeeded(); syncSettingsUI(); updateSeasonalStats(); })
-    .catch(err=> console.error('DB init error', err));
+    .then(()=> scheduleLocalBackup('db-init'))
+    .catch(err=>{
+      console.error('DB init error', err);
+      if(!warmBackup){
+        updateBalance();
+        renderRecent();
+        syncSettingsUI();
+      }
+    });
 
-  // Ensure recent is rendered after DB init (separate tick)
-  setTimeout(()=> renderRecent(),300);
+  function registerServiceWorker(){
+    if(!('serviceWorker' in navigator)) return;
+    const monitorInstalling = worker=>{
+      if(!worker) return;
+      worker.addEventListener('statechange', ()=>{
+        if(worker.state === 'installed' && navigator.serviceWorker.controller){
+          flushLocalBackup('sw-update-install');
+          try{ localStorage.setItem(UPDATE_FLAG_KEY,'1'); }catch(_){ /* ignore */ }
+          try{ worker.postMessage({ type:'SKIP_WAITING' }); }catch(_){ /* ignore */ }
+          window.dispatchEvent(new CustomEvent('ftm:update-ready'));
+        }
+      });
+    };
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      if(reg.installing) monitorInstalling(reg.installing);
+      reg.addEventListener('updatefound', ()=> monitorInstalling(reg.installing));
+    }).catch(err=> console.error('SW registration failed', err));
 
-  // Service worker registration (optional offline)
-  if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      let hadFlag = false;
+      try{
+        hadFlag = localStorage.getItem(UPDATE_FLAG_KEY) === '1';
+        if(hadFlag) localStorage.removeItem(UPDATE_FLAG_KEY);
+      }catch(_){ /* ignore */ }
+      if(hadFlag){
+        flushLocalBackup('sw-controller-change');
+        setTimeout(()=> window.location.reload(), 80);
+      }
+    });
+  }
+  registerServiceWorker();
+
+  window.addEventListener('beforeunload', ()=> flushLocalBackup('beforeunload'));
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'hidden') flushLocalBackup('visibility-hidden');
+  });
 
   // Prevent quick double-tap from triggering zoom on some mobile browsers.
   // This is a small, focused guard that cancels the second tap within 300ms.
