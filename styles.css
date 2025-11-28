@@ -148,7 +148,7 @@ html, body, .app, .screen, .top-bar, .transaction, .recent-item, .balance, .logo
 .confirm-row { display:flex; align-items:center; gap:.7rem; font-size:.8rem; flex-wrap:wrap; margin-top:.25rem; }
 .sheet { position:fixed; inset:0; z-index:40; animation:fadeIn .2s ease; }
 .sheet-overlay { position:absolute; inset:0; background:rgba(0,0,0,.65); cursor:pointer; }
-.sheet-panel { position:absolute; left:0; right:0; bottom:0; background:var(--sheet-bg); border-top:1px solid var(--panel-border); border-radius:30px 30px 0 0; padding:1.2rem 1.5rem calc(2rem + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:1.2rem; box-shadow:0 -10px 40px rgba(0,0,0,.5); animation:slideUpSheet .3s cubic-bezier(.4,0,.2,1); max-height:85vh; }
+.sheet-panel { position:absolute; left:0; right:0; bottom:0; background:var(--sheet-bg); border-top:1px solid var(--panel-border); border-radius:30px 30px 0 0; padding:1.2rem 1.5rem calc(2rem + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:1.2rem; box-shadow:0 -10px 40px rgba(0,0,0,.5); animation:slideUpSheet .3s cubic-bezier(.4,0,.2,1); max-height:85vh; overflow-y:auto; }
 @keyframes slideUpSheet { from { transform:translateY(100%); } to { transform:translateY(0); } }
 .sheet-grabber { width:45px; height:5px; margin:0 auto .5rem; border-radius:999px; background:rgba(255,255,255,.25); }
 html.theme-light .btn.ghost { background:rgba(0,0,0,.08); }
