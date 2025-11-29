@@ -20,7 +20,11 @@
       <header class="top-bar">
         <button id="btnHistory" class="pill accent" aria-label="History">History</button>
         <h1 class="logo">FollowTheMoney</h1>
-        <button id="btnSettings" class="pill accent" aria-label="Settings">⚙</button>
+        <button id="btnSettings" class="pill accent" aria-label="Settings">
+          <svg class="icon-gear" viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+            <path fill="#fff" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.63l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.08 7.08 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 14.98 2h-3.96a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.55-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L3.62 8.48a.5.5 0 0 0 .12.63l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94L3.74 13.15a.5.5 0 0 0-.12.63l1.92 3.32c.13.23.4.32.63.22l2.39-.96c.5.4 1.04.71 1.63.94l.36 2.54c.04.25.25.42.5.42h3.96c.25 0 .46-.17.5-.42l.36-2.54c.59-.24 1.13-.55 1.63-.94l2.39.96c.23.1.5.01.63-.22l1.92-3.32a.5.5 0 0 0-.12-.63l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
+          </svg>
+        </button>
       </header>
       <main class="center-stack">
         <div class="balance-label">Balance <span id="seasonBadge" class="badge" hidden>Off-season</span></div>
@@ -70,35 +74,44 @@
     </section>
     <section id="screen-graph" class="screen" aria-label="Insights" hidden>
       <header class="graph-top-bar" role="banner">
-        <div class="graph-top-left">
-          <p class="graph-eyebrow">Insights</p>
-          <h1 class="graph-title">Landscape view</h1>
-          <span class="graph-hint">Rotate upright to return</span>
+        <h1 class="graph-title" aria-label="Insights">Insights</h1>
+        <div id="graphTypeFilters" class="graph-type-filters" role="group" aria-label="Graph Type">
+          <button class="graph-type-pill" data-graph-type="income">Income</button>
+          <button class="graph-type-pill" data-graph-type="expense">Expense</button>
         </div>
-        <div class="graph-control-stack">
-          <div id="graphTypeFilters" class="graph-type-filters" role="group" aria-label="Graph Type">
-            <button class="graph-type-pill" data-graph-type="income">Income</button>
-            <button class="graph-type-pill" data-graph-type="expense">Expense</button>
-          </div>
-          <div class="graph-view-toggle" role="radiogroup" aria-label="Group by">
-            <label>
-              <input type="radio" name="graphGroup" value="category" checked>
-              <span>Categories</span>
-            </label>
-            <label>
-              <input type="radio" name="graphGroup" value="name">
-              <span>Names</span>
-            </label>
-          </div>
+        <div class="graph-view-toggle" role="radiogroup" aria-label="Group by">
+          <label>
+            <input type="radio" name="graphGroup" value="category" checked>
+            <span>Categories</span>
+          </label>
+          <label>
+            <input type="radio" name="graphGroup" value="name">
+            <span>Names</span>
+          </label>
         </div>
       </header>
-      <div class="graph-body">
-        <div class="graph-canvas-wrap">
-          <canvas id="graphCanvas" width="340" height="340" aria-label="Distribution chart"></canvas>
-          <div id="graphEmpty" class="graph-empty" hidden>No data to visualize yet.</div>
-        </div>
-        <div class="graph-legend-panel">
-          <div class="graph-legend" id="graphLegend" aria-live="polite"></div>
+      <div class="graph-board">
+        <div class="graph-main">
+          <div class="graph-chart-card">
+            <div class="graph-canvas-shell">
+              <div class="graph-total-overlay">
+                <p class="total-label">Total</p>
+                <p id="graphTotalValue" class="total-amount">0.00 €</p>
+                <p id="graphTotalScope" class="total-scope">Income · by categories</p>
+              </div>
+              <div class="graph-canvas-wrap">
+                <canvas id="graphCanvas" width="340" height="340" aria-label="Distribution chart"></canvas>
+                <div id="graphEmpty" class="graph-empty" hidden>No data to visualize yet.</div>
+              </div>
+            </div>
+            <div class="graph-breakdown-card">
+              <div class="graph-breakdown-header">
+                <h2>Breakdown</h2>
+                <span class="graph-breakdown-hint">Top contributors</span>
+              </div>
+              <div class="graph-legend" id="graphLegend" aria-live="polite"></div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -106,7 +119,10 @@
       <div class="modal-overlay" data-dismiss></div>
       <div class="modal-panel" role="dialog" aria-modal="true" aria-label="Settings">
         <div class="settings-header">
-          <h2>Settings</h2>
+          <div class="settings-title" aria-label="Settings">
+            <span class="settings-gear" aria-hidden="true">⚙</span>
+            <h2>Settings</h2>
+          </div>
           <label class="toggle-row switch inline-switch">
             <input type="checkbox" id="themeToggle">
             <span class="switch-ui" aria-hidden="true"><span class="switch-thumb"></span></span>

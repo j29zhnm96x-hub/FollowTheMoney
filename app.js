@@ -58,6 +58,8 @@
   const graphLegendEl = $('#graphLegend');
   const graphCanvas = $('#graphCanvas');
   const graphEmptyEl = $('#graphEmpty');
+  const graphTotalValueEl = $('#graphTotalValue');
+  const graphTotalScopeEl = $('#graphTotalScope');
   const graphGroupInputs = Array.from(document.querySelectorAll('input[name="graphGroup"]'));
 
   let sheetType = null; // 'income' | 'expense'
@@ -316,8 +318,9 @@
     graphColorCache.set(label,color);
     return color;
   }
-  function buildGraphSegments(){
-    const filterPositive = graphType === 'income';
+  function buildGraphSegments(typeOverride){
+    const currentType = typeOverride || graphType;
+    const filterPositive = currentType === 'income';
     const key = graphGrouping === 'name' ? 'name' : 'category';
     const fallback = graphGrouping === 'name' ? 'Unnamed' : 'Uncategorized';
     const map = new Map();
@@ -357,7 +360,27 @@
     const segments = buildGraphSegments();
     const total = segments.reduce((sum,item)=> sum + item.value, 0);
     graphLegendEl.innerHTML = '';
+    if(graphTotalValueEl){
+      graphTotalValueEl.textContent = total>0 ? formatCurrency(total) : formatCurrency(0);
+    }
+    if(graphTotalScopeEl){
+      const groupingLabel = graphGrouping === 'name' ? 'by names' : 'by categories';
+      graphTotalScopeEl.textContent = total>0
+        ? `${graphType==='income'?'Income':'Expense'} · ${groupingLabel}`
+        : 'No data yet';
+    }
     if(total<=0){
+      if(transactions.length){
+        const alternateType = graphType === 'income' ? 'expense' : 'income';
+        const alternateSegments = buildGraphSegments(alternateType);
+        const alternateTotal = alternateSegments.reduce((sum,item)=> sum + item.value, 0);
+        if(alternateTotal > 0){
+          graphType = alternateType;
+          updateGraphTypeButtons();
+          renderGraph();
+          return;
+        }
+      }
       if(graphEmptyEl) graphEmptyEl.hidden = false;
       graphCanvas.style.visibility = 'hidden';
       return;
@@ -387,30 +410,24 @@
       const legendItem = document.createElement('div');
       legendItem.className = 'graph-legend-item';
       const dot = document.createElement('span');
-      dot.className = 'legend-dot';
+      dot.className = 'graph-legend-color';
       dot.style.background = color;
       const percent = Math.round((segment.value/total)*1000)/10;
-      const label = document.createElement('span');
-      label.textContent = `${segment.label} · ${percent}%`;
+      const text = document.createElement('span');
+      text.className = 'legend-label';
+      text.textContent = segment.label;
+      const pct = document.createElement('strong');
+      pct.textContent = `${percent}%`;
       legendItem.appendChild(dot);
-      legendItem.appendChild(label);
+      legendItem.appendChild(text);
+      legendItem.appendChild(pct);
       graphLegendEl.appendChild(legendItem);
     });
-
     ctx.beginPath();
     ctx.arc(centerX, centerY, innerRadius, 0, Math.PI*2);
     const bodyStyles = window.getComputedStyle(document.body);
     ctx.fillStyle = bodyStyles.getPropertyValue('background-color') || 'rgba(15,16,36,0.9)';
     ctx.fill();
-
-    const textColor = bodyStyles.getPropertyValue('color') || '#fff';
-    ctx.fillStyle = textColor;
-    ctx.font = `${14*(window.devicePixelRatio||1)}px ${bodyStyles.getPropertyValue('font-family')}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(graphType==='income'?'Income':'Expense', centerX, centerY - 8);
-    ctx.font = `${12*(window.devicePixelRatio||1)}px ${getComputedStyle(document.body).fontFamily}`;
-    ctx.fillText(graphGrouping==='name'?'By names':'By categories', centerX, centerY + 8);
   }
   function isLandscapeMode(){
     return window.innerWidth > window.innerHeight + 80;
