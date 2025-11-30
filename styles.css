@@ -124,7 +124,7 @@ html, body, .app, .screen, .top-bar, .transaction, .recent-item, .balance, .logo
 @media (min-width:600px){ .circle { width:6rem; height:6rem; font-size:4rem; } .float-buttons { gap:5rem; } }
 .history-filter { margin:0 1.25rem 0.2rem; padding:.6rem 1rem; background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; font-size:.8rem; text-align:center; font-weight:600; opacity:.8; }
 .history-list { display:flex; flex-direction:column; gap:.85rem; padding:1rem 0 2rem; }
-.transaction { background:var(--panel); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); border:1px solid var(--panel-border); border-radius:var(--radius-xl); padding:1.1rem 1.3rem; display:flex; align-items:center; justify-content:space-between; position:relative; overflow:hidden; transition:transform .2s ease; touch-action:pan-y; }
+.transaction { background:var(--panel); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); border:1px solid var(--panel-border); border-radius:var(--radius-xl); padding:1.1rem 1.3rem; display:flex; align-items:center; justify-content:space-between; position:relative; overflow:hidden; transition:transform .2s ease; transform: translateY(-40px); touch-action:pan-y; }
 .transaction .left { display:flex; flex-direction:column; flex:1; min-width:0; gap:.15rem; }
 .transaction .title { font-weight:600; font-size:.95rem; margin-bottom:.25rem; }
 .transaction .meta { font-size:.7rem; opacity:.5; margin-top:.15rem; }
@@ -216,6 +216,12 @@ html.theme-light .sheet-grabber { background:rgba(0,0,0,.2); }
   box-shadow:0 16px 32px rgba(0,0,0,.25);
   transform: translateY(-45px);
   z-index: 6;
+}
+/* Nudge the chip rows up to sit closer to the header */
+#categoryChipRow,
+#nameChipRow {
+  transform: translateY(-40px);
+  z-index: 5;
 }
 html.theme-light .type-filter-card { box-shadow:0 12px 24px rgba(0,0,0,.12); }
 .type-filters {
@@ -469,7 +475,7 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
   align-items:center;
   width:100%;
   box-shadow:0 16px 32px rgba(0,0,0,.25);
-  transform: translateY(-50px);
+  transform: translateY(-53px);
   z-index: 4;
 }
 html.theme-light .group-summary { box-shadow:0 12px 28px rgba(0,0,0,.12); }
