@@ -220,7 +220,7 @@ html.theme-light .sheet-grabber { background:rgba(0,0,0,.2); }
 /* Nudge the chip rows up to sit closer to the header */
 #categoryChipRow,
 #nameChipRow {
-  transform: translateY(-40px);
+  transform: translate(-20px, -40px);
   z-index: 5;
 }
 html.theme-light .type-filter-card { box-shadow:0 12px 24px rgba(0,0,0,.12); }
