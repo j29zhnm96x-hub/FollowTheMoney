@@ -269,7 +269,7 @@ html.theme-light .type-filter-card { box-shadow:0 12px 24px rgba(0,0,0,.12); }
 .type-pill.active[data-type="expense"] { background:var(--expense); color:#fff; border-color:var(--expense); }
 .type-pill.active::after { opacity:1; background:#0b2a6b; border:2px solid #58c7ff; }
 html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid #b388ff; }
-.chip-row { display:flex; gap:.5rem; overflow-x:auto; padding:0 1.3rem; margin:0 0 .75rem; }
+.chip-row { display:flex; gap:.5rem; overflow-x:auto; padding:0 1.3rem 0 calc(1.25rem + 1.1rem); margin:0 0 .75rem; }
 .chip-row::-webkit-scrollbar { display:none; }
 .chip { border:1px solid var(--panel-border); border-radius:999px; padding:.35rem .9rem; font-size:.8rem; font-weight:600; background:var(--panel); color:var(--fg); cursor:pointer; white-space:nowrap; transition:.2s ease; }
 .chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
