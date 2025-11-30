@@ -232,49 +232,29 @@ html.theme-light .type-filter-card { box-shadow:0 12px 24px rgba(0,0,0,.12); }
   background:transparent;
   color:var(--fg);
   display:flex;
-  justify-content:flex-end;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
   overflow:visible;
+  position:relative;
 }
 .type-pill:active { transform:scale(.97); }
 .type-pill[data-type="income"] { color:var(--income); border-color:var(--income-outline); background:var(--income-tint); }
 .type-pill[data-type="all"] { color:var(--accent); border-color:var(--all-outline); background:var(--all-tint); }
 .type-pill[data-type="expense"] { color:var(--expense); border-color:var(--expense-outline); background:var(--expense-tint); }
 .type-pill::after {
-  content:"";
-  flex:1 1 720px;
-  padding:1.5rem;
-  margin-left:auto;
-  display:flex;
-  flex-wrap:wrap;
-  flex-direction:row-reverse;
-  gap:1.5rem;
-  align-items:stretch;
-  position:absolute;
-.graph-breakdown-card {
-  flex:0 0 280px;
-  min-width:240px;
-  padding-left:1.5rem;
-  border-left:1px solid var(--graph-panel-border);
-  display:flex;
-  flex-direction:column;
-  gap:1rem;
-}
-.graph-chart-card .graph-breakdown-card {
-  background:transparent;
-  border-radius:0;
-  border:0;
-  border-left:1px solid var(--graph-panel-border);
-  box-shadow:none;
-}
-.graph-chart-card .graph-breakdown-card h2 { margin-top:.25rem; }
-.graph-chart-card .graph-breakdown-card .graph-breakdown-hint { color:var(--graph-shell-muted); }
-  border-radius:50%;
-  bottom:-12px;
-  left:50%;
-  transform:translateX(-50%);
-  opacity:0;
-  transition:opacity .2s ease;
-  background:transparent;
+  content: "";
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  opacity: 0;
+  transition: opacity .18s ease, background .18s ease, transform .18s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12) inset;
 }
 .type-pill.active[data-type="income"] { background:var(--income); color:#000; border-color:var(--income); }
 .type-pill.active[data-type="all"] { background:var(--accent); color:#fff; border-color:var(--accent); }
