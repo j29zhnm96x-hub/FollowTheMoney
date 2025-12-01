@@ -72,6 +72,49 @@
       <div class="chip-row" id="nameChipRow" aria-label="Names"></div>
       <main class="history-list" id="historyList" aria-live="polite"></main>
     </section>
+    <section id="screen-summary" class="screen" aria-label="Group summary" hidden>
+      <header class="top-bar">
+        <button id="btnSummaryBack" class="pill accent" aria-label="Back to history">Back</button>
+        <h1 class="logo">Summary</h1>
+        <div class="pill ghost hidden-placeholder">•</div>
+      </header>
+      <div class="summary-shell">
+        <article class="summary-card" aria-live="polite">
+          <p id="summaryLabel" class="summary-label">All entries</p>
+          <div class="summary-total">
+            <div>
+              <span>Total balance</span>
+              <strong id="summaryNet">0.00 €</strong>
+            </div>
+            <div>
+              <span>Entries</span>
+              <strong id="summaryCount">0</strong>
+            </div>
+          </div>
+          <div class="summary-metrics">
+            <div class="metric">
+              <span>Income</span>
+              <strong id="summaryIncome">0.00 €</strong>
+            </div>
+            <div class="metric">
+              <span>Expenses</span>
+              <strong id="summaryExpense">0.00 €</strong>
+            </div>
+          </div>
+          <p id="summaryFilters" class="summary-filters">No filters applied</p>
+        </article>
+        <section class="summary-actions">
+          <button id="btnCopySummary" class="btn primary" type="button">Copy summary</button>
+          <button id="btnExportSummary" class="btn ghost" type="button">Export JSON</button>
+          <button id="btnShareSummary" class="btn accent" type="button">Share</button>
+          <p id="summaryFeedback" class="summary-feedback" role="status" aria-live="polite"></p>
+        </section>
+        <section class="summary-list" aria-label="Preview transactions">
+          <h2>Preview</h2>
+          <div id="summaryList" class="summary-list-items"></div>
+        </section>
+      </div>
+    </section>
     <section id="screen-graph" class="screen" aria-label="Insights" hidden>
       <header class="graph-top-bar" role="banner">
         <h1 class="graph-title" aria-label="Insights">Insights</h1>

@@ -45,6 +45,19 @@
   const categoryChipRow = $('#categoryChipRow');
   const nameChipRow = $('#nameChipRow');
   const historyGroupSummaryEl = $('#historyGroupSummary');
+  const summaryScreen = $('#screen-summary');
+  const summaryLabelEl = $('#summaryLabel');
+  const summaryCountEl = $('#summaryCount');
+  const summaryIncomeEl = $('#summaryIncome');
+  const summaryExpenseEl = $('#summaryExpense');
+  const summaryNetEl = $('#summaryNet');
+  const summaryFiltersEl = $('#summaryFilters');
+  const summaryListEl = $('#summaryList');
+  const summaryFeedbackEl = $('#summaryFeedback');
+  const btnSummaryBack = $('#btnSummaryBack');
+  const btnCopySummary = $('#btnCopySummary');
+  const btnExportSummary = $('#btnExportSummary');
+  const btnShareSummary = $('#btnShareSummary');
   const editDateContainer = $('#editDateContainer');
   const editDateInput = $('#editDateInput');
   const dateFormatEl = $('#dateFormat');
@@ -71,6 +84,9 @@
   let historyTypeFilter = 'all'; // 'all' | 'income' | 'expense'
   let historyCategoryFilter = null;
   let historyNameFilter = null;
+  let historySummaryState = null;
+  let summaryPressTimer = null;
+  let previousSummaryReturnScreen = 'history';
   let settings = { 
     recurringEnabled:false, 
     recurringAmountCents:0, 
@@ -444,6 +460,7 @@
     historyScreen.hidden = true;
     graphScreen.hidden = false;
     graphScreen.classList.add('active');
+    currentScreen = 'graph';
     resizeGraphCanvas();
     updateGraphTypeButtons();
     renderGraph();
@@ -468,6 +485,11 @@
   }
   function syncGraphScreenVisibility(){
     if(!graphScreen) return;
+    if(currentScreen === 'summary'){
+      graphScreen.hidden = true;
+      graphScreen.classList.remove('active');
+      return;
+    }
     const landscape = isLandscapeMode();
     if(landscape){
       showGraphScreen();
@@ -1018,6 +1040,7 @@
     if(!list.length){
       historyGroupSummaryEl.hidden = true;
       historyGroupSummaryEl.innerHTML = '';
+      historySummaryState = null;
       return;
     }
     historyGroupSummaryEl.hidden = false;
@@ -1039,6 +1062,22 @@
 
     historyGroupSummaryEl.appendChild(labelSpan);
     historyGroupSummaryEl.appendChild(sumSpan);
+
+    const incomeCents = list.reduce((sum,t)=> t.amountCents>0 ? sum + t.amountCents : sum, 0);
+    const expenseCents = list.reduce((sum,t)=> t.amountCents<0 ? sum + Math.abs(t.amountCents) : sum, 0);
+    historySummaryState = {
+      label: labelSpan.textContent,
+      totalCents,
+      incomeCents,
+      expenseCents,
+      count: list.length,
+      filters: {
+        type: historyTypeFilter,
+        category: historyCategoryFilter,
+        name: historyNameFilter
+      },
+      transactions: list.map(t=> ({ ...t }))
+    };
   }
 
   function renderHistory(){
@@ -1188,6 +1227,156 @@
         highlightEl.scrollIntoView({ behavior:'smooth', block:'center' });
       }
       pendingHistoryHighlightId = null;
+    }
+  }
+
+  function renderSummaryScreen(){
+    if(!summaryScreen || !historySummaryState) return;
+    const { label, totalCents, incomeCents, expenseCents, count, filters, transactions } = historySummaryState;
+    if(summaryLabelEl) summaryLabelEl.textContent = label || 'All entries';
+    if(summaryNetEl) summaryNetEl.textContent = formatCurrency(totalCents);
+    if(summaryCountEl) summaryCountEl.textContent = String(count);
+    if(summaryIncomeEl) summaryIncomeEl.textContent = formatCurrency(incomeCents);
+    if(summaryExpenseEl) summaryExpenseEl.textContent = formatCurrency(expenseCents);
+    if(summaryFiltersEl){
+      const filterParts = [];
+      if(filters.type && filters.type !== 'all') filterParts.push(filters.type === 'income' ? 'Income only' : 'Expenses only');
+      if(filters.category) filterParts.push(`Category: ${filters.category}`);
+      if(filters.name) filterParts.push(`Name: ${filters.name}`);
+      summaryFiltersEl.textContent = filterParts.length ? filterParts.join(' · ') : 'No filters applied';
+    }
+    if(summaryFeedbackEl) summaryFeedbackEl.textContent = '';
+    if(summaryListEl){
+      summaryListEl.innerHTML = '';
+      transactions.slice(0,5).forEach(tx=>{
+        const row = document.createElement('div');
+        row.className = 'summary-list-item';
+        const metaWrap = document.createElement('div');
+        metaWrap.className = 'text';
+        const titleEl = document.createElement('div');
+        titleEl.className = 'title';
+        titleEl.textContent = buildEntryLabel(tx);
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = formatDateTime(tx.createdAt, true);
+        metaWrap.appendChild(titleEl);
+        metaWrap.appendChild(meta);
+        const amount = document.createElement('div');
+        amount.className = 'amount ' + (tx.amountCents>=0 ? 'amount-pos' : 'amount-neg');
+        amount.textContent = formatCurrency(Math.abs(tx.amountCents));
+        row.appendChild(metaWrap);
+        row.appendChild(amount);
+        summaryListEl.appendChild(row);
+      });
+      if(transactions.length === 0){
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No transactions in this selection yet.';
+        summaryListEl.appendChild(empty);
+      }
+    }
+  }
+
+  function openSummaryScreen(){
+    if(!summaryScreen || !historySummaryState) return;
+    previousSummaryReturnScreen = currentScreen || 'history';
+    homeScreen.classList.remove('active');
+    homeScreen.hidden = true;
+    historyScreen.classList.remove('active');
+    historyScreen.hidden = true;
+    if(graphScreen){
+      graphScreen.classList.remove('active');
+      graphScreen.hidden = true;
+    }
+    summaryScreen.hidden = false;
+    summaryScreen.classList.add('active');
+    currentScreen = 'summary';
+    renderSummaryScreen();
+  }
+
+  function closeSummaryScreen(){
+    if(!summaryScreen) return;
+    summaryScreen.classList.remove('active');
+    summaryScreen.hidden = true;
+    if(previousSummaryReturnScreen === 'home'){
+      homeScreen.hidden = false;
+      homeScreen.classList.add('active');
+      historyScreen.hidden = true;
+      historyScreen.classList.remove('active');
+      currentScreen = 'home';
+    } else if(previousSummaryReturnScreen === 'graph'){
+      showGraphScreen();
+    } else {
+      historyScreen.hidden = false;
+      historyScreen.classList.add('active');
+      homeScreen.hidden = true;
+      homeScreen.classList.remove('active');
+      currentScreen = 'history';
+      renderHistory();
+    }
+    syncGraphScreenVisibility();
+  }
+
+  function buildSummaryText(){
+    if(!historySummaryState) return '';
+    const { label, count, totalCents, incomeCents, expenseCents } = historySummaryState;
+    return [
+      `Summary: ${label || 'All entries'}`,
+      `Entries: ${count}`,
+      `Income: ${formatCurrency(incomeCents)}`,
+      `Expenses: ${formatCurrency(expenseCents)}`,
+      `Net: ${formatCurrency(totalCents)}`
+    ].join('\n');
+  }
+
+  function copySummaryToClipboard(){
+    if(!historySummaryState) return;
+    const text = buildSummaryText();
+    const setMessage = msg=>{ if(summaryFeedbackEl) summaryFeedbackEl.textContent = msg; };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text)
+        .then(()=> setMessage('Summary copied to clipboard.'))
+        .catch(()=>{
+          setMessage('Clipboard unavailable.');
+          window.prompt('Copy summary text:', text);
+        });
+    } else {
+      window.prompt('Copy summary text:', text);
+      setMessage('Summary ready to copy.');
+    }
+  }
+
+  function exportSummaryJSON(){
+    if(!historySummaryState) return;
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      summary: historySummaryState,
+      currency: settings.currencySymbol || '€'
+    };
+    const blob = new Blob([JSON.stringify(payload,null,2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `group-summary-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(()=> URL.revokeObjectURL(url), 1500);
+    if(summaryFeedbackEl) summaryFeedbackEl.textContent = 'Summary exported as JSON.';
+  }
+
+  function shareSummary(){
+    if(!historySummaryState) return;
+    const text = buildSummaryText();
+    if(navigator.share){
+      navigator.share({ title:'FollowTheMoney summary', text })
+        .then(()=>{ if(summaryFeedbackEl) summaryFeedbackEl.textContent = 'Summary shared.'; })
+        .catch(err=>{
+          if(err && err.name==='AbortError') return;
+          copySummaryToClipboard();
+        });
+    } else {
+      copySummaryToClipboard();
     }
   }
 
@@ -1516,6 +1705,10 @@
   $('#btnSettings').addEventListener('click',openSettings);
   const btnHelpManual = $('#btnHelpManual');
   if(btnHelpManual) btnHelpManual.addEventListener('click', ()=>{ openHelp(); });
+  if(btnSummaryBack) btnSummaryBack.addEventListener('click', closeSummaryScreen);
+  if(btnCopySummary) btnCopySummary.addEventListener('click', copySummaryToClipboard);
+  if(btnExportSummary) btnExportSummary.addEventListener('click', exportSummaryJSON);
+  if(btnShareSummary) btnShareSummary.addEventListener('click', shareSummary);
   $('#btnHistory').addEventListener('click',()=>{ 
     historyFilter = null; // clear filter
     homeScreen.classList.remove('active'); 
@@ -1535,6 +1728,25 @@
     renderRecent();
     syncGraphScreenVisibility();
   });
+  if(historyGroupSummaryEl){
+    const beginSummaryPress = ()=>{
+      if(summaryPressTimer || !historySummaryState) return;
+      summaryPressTimer = setTimeout(()=>{
+        summaryPressTimer = null;
+        openSummaryScreen();
+      }, 2000);
+    };
+    const cancelSummaryPress = ()=>{
+      if(summaryPressTimer){
+        clearTimeout(summaryPressTimer);
+        summaryPressTimer = null;
+      }
+    };
+    historyGroupSummaryEl.addEventListener('pointerdown', beginSummaryPress);
+    historyGroupSummaryEl.addEventListener('pointerup', cancelSummaryPress);
+    historyGroupSummaryEl.addEventListener('pointerleave', cancelSummaryPress);
+    historyGroupSummaryEl.addEventListener('pointercancel', cancelSummaryPress);
+  }
   toggleNoteBtn.addEventListener('click',()=>{
     if(noteContainer.hidden){
       noteContainer.hidden=false;
@@ -1848,6 +2060,7 @@
       if(!sheet.hidden) closeSheet();
       if(!settingsModal.hidden) closeSettings();
       if(helpModal && !helpModal.hidden) closeHelp();
+      if(summaryScreen && !summaryScreen.hidden) closeSummaryScreen();
     }
   });
 
