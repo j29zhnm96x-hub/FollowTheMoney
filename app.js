@@ -52,11 +52,7 @@
   const summaryNetEl = $('#summaryNet');
   const summaryFiltersEl = $('#summaryFilters');
   const summaryListEl = $('#summaryList');
-  const summaryFeedbackEl = $('#summaryFeedback');
   const btnSummaryBack = $('#btnSummaryBack');
-  const btnCopySummary = $('#btnCopySummary');
-  const btnExportSummary = $('#btnExportSummary');
-  const btnShareSummary = $('#btnShareSummary');
   const editDateContainer = $('#editDateContainer');
   const editDateInput = $('#editDateInput');
   const dateFormatEl = $('#dateFormat');
@@ -1062,19 +1058,17 @@
     historyGroupSummaryEl.appendChild(labelSpan);
     historyGroupSummaryEl.appendChild(sumSpan);
 
-    const totalMagnitudeCents = list.reduce((sum,t)=> sum + Math.abs(t.amountCents), 0);
-    const averageEntryCents = list.length ? Math.round(totalMagnitudeCents / list.length) : 0;
     historySummaryState = {
       label: labelSpan.textContent,
       totalCents,
-      averageEntryCents,
       count: list.length,
       filters: {
         type: historyTypeFilter,
         category: historyCategoryFilter,
         name: historyNameFilter
       },
-      transactions: list.map(t=> ({ ...t }))
+      transactions: list.map(t=> ({ ...t })),
+      excludedIds: new Set()
     };
   }
 
@@ -1230,22 +1224,24 @@
 
   function renderSummaryScreen(){
     if(!summaryScreen || !historySummaryState) return;
-    const { label, totalCents, averageEntryCents, count, filters, transactions } = historySummaryState;
+    const { label, totalCents, count, filters, transactions } = historySummaryState;
+    const excludedIds = ensureSummaryExcludedSet();
+    const { averageCents } = computeSummaryAverage(transactions, excludedIds);
     if(summaryLabelEl) summaryLabelEl.textContent = label || 'All entries';
     if(summaryNetEl) summaryNetEl.textContent = formatCurrency(totalCents);
     if(summaryCountEl) summaryCountEl.textContent = String(count);
-    if(summaryAverageEl) summaryAverageEl.textContent = formatCurrency(averageEntryCents);
+    if(summaryAverageEl) summaryAverageEl.textContent = formatCurrency(averageCents);
     if(summaryFiltersEl){
       const filterParts = [];
       if(filters.type && filters.type !== 'all') filterParts.push(filters.type === 'income' ? 'Income only' : 'Expenses only');
       if(filters.category) filterParts.push(`Category: ${filters.category}`);
       if(filters.name) filterParts.push(`Name: ${filters.name}`);
+      if(excludedIds.size>0) filterParts.push(`Excluded: ${excludedIds.size}`);
       summaryFiltersEl.textContent = filterParts.length ? filterParts.join(' · ') : 'No filters applied';
     }
-    if(summaryFeedbackEl) summaryFeedbackEl.textContent = '';
     if(summaryListEl){
       summaryListEl.innerHTML = '';
-      transactions.slice(0,5).forEach(tx=>{
+      transactions.forEach(tx=>{
         const row = document.createElement('div');
         row.className = 'summary-list-item';
         const metaWrap = document.createElement('div');
@@ -1263,6 +1259,8 @@
         amount.textContent = formatCurrency(Math.abs(tx.amountCents));
         row.appendChild(metaWrap);
         row.appendChild(amount);
+        if(excludedIds.has(tx.id)) row.classList.add('excluded');
+        attachSummaryExclusionSwipe(row, tx.id);
         summaryListEl.appendChild(row);
       });
       if(transactions.length === 0){
@@ -1272,6 +1270,87 @@
         summaryListEl.appendChild(empty);
       }
     }
+  }
+
+  function ensureSummaryExcludedSet(){
+    if(!historySummaryState) return new Set();
+    if(!(historySummaryState.excludedIds instanceof Set)){
+      const existing = historySummaryState.excludedIds;
+      historySummaryState.excludedIds = new Set(Array.isArray(existing) ? existing : []);
+    }
+    return historySummaryState.excludedIds;
+  }
+
+  function computeSummaryAverage(list, excludedIds){
+    if(!Array.isArray(list) || list.length===0) return { averageCents: 0, includedCount: 0 };
+    const exclusionSet = excludedIds instanceof Set ? excludedIds : new Set();
+    const included = exclusionSet.size ? list.filter(tx=> tx && !exclusionSet.has(tx.id)) : list;
+    const includedCount = included.length;
+    const totalMagnitude = included.reduce((sum, tx)=> sum + Math.abs(tx.amountCents), 0);
+    const averageCents = includedCount ? Math.round(totalMagnitude / includedCount) : 0;
+    return { averageCents, includedCount };
+  }
+
+  function toggleSummaryExclusion(txId){
+    if(!historySummaryState || !txId) return;
+    const excludedSet = ensureSummaryExcludedSet();
+    if(excludedSet.has(txId)) excludedSet.delete(txId);
+    else excludedSet.add(txId);
+    renderSummaryScreen();
+  }
+
+  function attachSummaryExclusionSwipe(row, txId){
+    if(!row || !txId) return;
+    const threshold = 80;
+    let startX = 0;
+    let startY = 0;
+    let currentX = 0;
+    let swiping = false;
+
+    const resetPosition = ()=>{
+      row.style.transition = 'transform .2s ease';
+      row.style.transform = 'translateX(0)';
+    };
+
+    row.addEventListener('touchstart', e=>{
+      if(e.touches.length !== 1) return;
+      swiping = true;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      currentX = 0;
+      row.style.transition = 'none';
+    });
+    row.addEventListener('touchmove', e=>{
+      if(!swiping) return;
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+      if(Math.abs(deltaY) > 25 && Math.abs(deltaX) < 25){
+        swiping = false;
+        resetPosition();
+        return;
+      }
+      if(deltaX < 0){
+        e.preventDefault();
+        currentX = deltaX;
+        row.style.transform = `translateX(${currentX}px)`;
+      }
+    });
+    const finishSwipe = ()=>{
+      if(!swiping) return;
+      resetPosition();
+      if(currentX < -threshold){
+        toggleSummaryExclusion(txId);
+      }
+      swiping = false;
+      currentX = 0;
+    };
+    row.addEventListener('touchend', finishSwipe);
+    row.addEventListener('touchcancel', finishSwipe);
+    row.addEventListener('dblclick', e=>{
+      e.preventDefault();
+      toggleSummaryExclusion(txId);
+    });
   }
 
   function openSummaryScreen(){
@@ -1315,67 +1394,6 @@
     syncGraphScreenVisibility();
   }
 
-  function buildSummaryText(){
-    if(!historySummaryState) return '';
-    const { label, count, totalCents, averageEntryCents } = historySummaryState;
-    return [
-      `Summary: ${label || 'All entries'}`,
-      `Entries: ${count}`,
-      `Average entry: ${formatCurrency(averageEntryCents)}`,
-      `Net: ${formatCurrency(totalCents)}`
-    ].join('\n');
-  }
-
-  function copySummaryToClipboard(){
-    if(!historySummaryState) return;
-    const text = buildSummaryText();
-    const setMessage = msg=>{ if(summaryFeedbackEl) summaryFeedbackEl.textContent = msg; };
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text)
-        .then(()=> setMessage('Summary copied to clipboard.'))
-        .catch(()=>{
-          setMessage('Clipboard unavailable.');
-          window.prompt('Copy summary text:', text);
-        });
-    } else {
-      window.prompt('Copy summary text:', text);
-      setMessage('Summary ready to copy.');
-    }
-  }
-
-  function exportSummaryJSON(){
-    if(!historySummaryState) return;
-    const payload = {
-      generatedAt: new Date().toISOString(),
-      summary: historySummaryState,
-      currency: settings.currencySymbol || '€'
-    };
-    const blob = new Blob([JSON.stringify(payload,null,2)], { type:'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `group-summary-${Date.now()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(()=> URL.revokeObjectURL(url), 1500);
-    if(summaryFeedbackEl) summaryFeedbackEl.textContent = 'Summary exported as JSON.';
-  }
-
-  function shareSummary(){
-    if(!historySummaryState) return;
-    const text = buildSummaryText();
-    if(navigator.share){
-      navigator.share({ title:'FollowTheMoney summary', text })
-        .then(()=>{ if(summaryFeedbackEl) summaryFeedbackEl.textContent = 'Summary shared.'; })
-        .catch(err=>{
-          if(err && err.name==='AbortError') return;
-          copySummaryToClipboard();
-        });
-    } else {
-      copySummaryToClipboard();
-    }
-  }
 
   function startEditingTransaction(tx){
     const type = tx.amountCents>=0 ? 'income' : 'expense';
@@ -1703,9 +1721,6 @@
   const btnHelpManual = $('#btnHelpManual');
   if(btnHelpManual) btnHelpManual.addEventListener('click', ()=>{ openHelp(); });
   if(btnSummaryBack) btnSummaryBack.addEventListener('click', closeSummaryScreen);
-  if(btnCopySummary) btnCopySummary.addEventListener('click', copySummaryToClipboard);
-  if(btnExportSummary) btnExportSummary.addEventListener('click', exportSummaryJSON);
-  if(btnShareSummary) btnShareSummary.addEventListener('click', shareSummary);
   $('#btnHistory').addEventListener('click',()=>{ 
     historyFilter = null; // clear filter
     homeScreen.classList.remove('active'); 
