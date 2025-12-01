@@ -48,8 +48,7 @@
   const summaryScreen = $('#screen-summary');
   const summaryLabelEl = $('#summaryLabel');
   const summaryCountEl = $('#summaryCount');
-  const summaryIncomeEl = $('#summaryIncome');
-  const summaryExpenseEl = $('#summaryExpense');
+  const summaryAverageEl = $('#summaryAverage');
   const summaryNetEl = $('#summaryNet');
   const summaryFiltersEl = $('#summaryFilters');
   const summaryListEl = $('#summaryList');
@@ -1063,13 +1062,12 @@
     historyGroupSummaryEl.appendChild(labelSpan);
     historyGroupSummaryEl.appendChild(sumSpan);
 
-    const incomeCents = list.reduce((sum,t)=> t.amountCents>0 ? sum + t.amountCents : sum, 0);
-    const expenseCents = list.reduce((sum,t)=> t.amountCents<0 ? sum + Math.abs(t.amountCents) : sum, 0);
+    const totalMagnitudeCents = list.reduce((sum,t)=> sum + Math.abs(t.amountCents), 0);
+    const averageEntryCents = list.length ? Math.round(totalMagnitudeCents / list.length) : 0;
     historySummaryState = {
       label: labelSpan.textContent,
       totalCents,
-      incomeCents,
-      expenseCents,
+      averageEntryCents,
       count: list.length,
       filters: {
         type: historyTypeFilter,
@@ -1232,12 +1230,11 @@
 
   function renderSummaryScreen(){
     if(!summaryScreen || !historySummaryState) return;
-    const { label, totalCents, incomeCents, expenseCents, count, filters, transactions } = historySummaryState;
+    const { label, totalCents, averageEntryCents, count, filters, transactions } = historySummaryState;
     if(summaryLabelEl) summaryLabelEl.textContent = label || 'All entries';
     if(summaryNetEl) summaryNetEl.textContent = formatCurrency(totalCents);
     if(summaryCountEl) summaryCountEl.textContent = String(count);
-    if(summaryIncomeEl) summaryIncomeEl.textContent = formatCurrency(incomeCents);
-    if(summaryExpenseEl) summaryExpenseEl.textContent = formatCurrency(expenseCents);
+    if(summaryAverageEl) summaryAverageEl.textContent = formatCurrency(averageEntryCents);
     if(summaryFiltersEl){
       const filterParts = [];
       if(filters.type && filters.type !== 'all') filterParts.push(filters.type === 'income' ? 'Income only' : 'Expenses only');
@@ -1292,6 +1289,7 @@
     summaryScreen.classList.add('active');
     currentScreen = 'summary';
     renderSummaryScreen();
+    if(btnSummaryBack) btnSummaryBack.focus();
   }
 
   function closeSummaryScreen(){
@@ -1319,12 +1317,11 @@
 
   function buildSummaryText(){
     if(!historySummaryState) return '';
-    const { label, count, totalCents, incomeCents, expenseCents } = historySummaryState;
+    const { label, count, totalCents, averageEntryCents } = historySummaryState;
     return [
       `Summary: ${label || 'All entries'}`,
       `Entries: ${count}`,
-      `Income: ${formatCurrency(incomeCents)}`,
-      `Expenses: ${formatCurrency(expenseCents)}`,
+      `Average entry: ${formatCurrency(averageEntryCents)}`,
       `Net: ${formatCurrency(totalCents)}`
     ].join('\n');
   }
