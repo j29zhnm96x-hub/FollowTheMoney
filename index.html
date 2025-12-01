@@ -92,6 +92,13 @@
       </header>
       <div class="graph-board">
         <div class="graph-main">
+          <div class="graph-breakdown-card">
+            <div class="graph-breakdown-header">
+              <h2>Breakdown</h2>
+              <span class="graph-breakdown-hint">Top contributors</span>
+            </div>
+            <div class="graph-legend" id="graphLegend" aria-live="polite"></div>
+          </div>
           <div class="graph-chart-card">
             <div class="graph-canvas-shell">
               <div class="graph-total-overlay">
@@ -103,13 +110,6 @@
                 <canvas id="graphCanvas" width="340" height="340" aria-label="Distribution chart"></canvas>
                 <div id="graphEmpty" class="graph-empty" hidden>No data to visualize yet.</div>
               </div>
-            </div>
-            <div class="graph-breakdown-card">
-              <div class="graph-breakdown-header">
-                <h2>Breakdown</h2>
-                <span class="graph-breakdown-hint">Top contributors</span>
-              </div>
-              <div class="graph-legend" id="graphLegend" aria-live="polite"></div>
             </div>
           </div>
         </div>
@@ -213,8 +213,137 @@
             </section>
           </div>
           <div class="settings-actions">
+            <button id="btnHelpManual" class="btn accent full" type="button">Help &amp; Manual</button>
             <button class="btn ghost full" data-dismiss>Close</button>
           </div>
+        </div>
+      </div>
+    </div>
+    <div id="helpModal" class="modal" hidden>
+      <div class="modal-overlay" data-dismiss></div>
+      <div class="modal-panel help-panel" role="dialog" aria-modal="true" aria-label="Help and Manual">
+        <div class="settings-header">
+          <div class="settings-title">
+            <span class="settings-gear" aria-hidden="true">❓</span>
+            <h2>User Manual</h2>
+          </div>
+          <button class="btn ghost" data-dismiss aria-label="Close help">Close</button>
+        </div>
+        <div class="help-content" aria-live="polite">
+          <section>
+            <h3>Overview</h3>
+            <p>FollowTheMoney is a compact, privacy-first money tracking app focused on simple entry, quick review, and clear visual insights. It supports income and expense recording, history browsing with filters, and a donut-style Insights view for high-level breakdowns.</p>
+          </section>
+
+          <section>
+            <h3>Quick Start</h3>
+            <ol>
+              <li>Open the app and tap the green <em>Add Income</em> or red <em>Add Expense</em> circle on the Home screen.</li>
+              <li>Enter the amount using the numeric keypad. Amounts are stored as cents (two decimals) and will display using your chosen currency symbol.</li>
+              <li>Choose or type a <strong>Category</strong> (required) and a <strong>Name</strong> (optional but recommended) to group and attribute the transaction.</li>
+              <li>Optionally add a note or change the transaction date/time when editing.</li>
+              <li>Tap <em>Add</em> (or <em>Save Changes</em> when editing) to persist the transaction.</li>
+            </ol>
+          </section>
+
+          <section>
+            <h3>Screens & Controls</h3>
+            <h4>Home</h4>
+            <p>Shows your current balance, three allowance cards (daily/weekly/monthly when relevant), and the most recent transactions. Use the floating add buttons to create new entries quickly.</p>
+
+            <h4>History</h4>
+            <ul>
+              <li><strong>Type filters:</strong> Use the Income/All/Expense pills to limit visible items by transaction sign.</li>
+              <li><strong>Chip rows:</strong> Category and Name chips appear below the filters. Tap a chip to limit History to that value. Use the pill labeled <em>All</em> to clear.</li>
+              <li><strong>Group summary:</strong> A summary card shows totals for the current filter set.</li>
+              <li><strong>Edit & Delete:</strong> Tap the pencil icon on a transaction to edit. Swipe left/right to delete (swipe disabled when History Lock is on).</li>
+            </ul>
+
+            <h4>Insights</h4>
+            <p>Best viewed in landscape: the screen is split into two cards. The left card lists a <strong>Breakdown</strong> (legend and top contributors). The right card shows a donut chart representing shared percentages. Controls at the top choose between Income vs Expense and grouping by Categories or Names.</p>
+          </section>
+
+          <section>
+            <h3>Adding & Editing Transactions (Detailed)</h3>
+            <p>When creating or editing an entry, these fields are available:</p>
+            <ul>
+              <li><strong>Amount</strong> — numeric keypad accepts digits; internal storage uses cents.</li>
+              <li><strong>Category</strong> — required. Categories are used for grouping in Insights and History.</li>
+              <li><strong>Name</strong> — optional. Helps attribute recurring sources or payees.</li>
+              <li><strong>Note</strong> — optional free-text for context.</li>
+              <li><strong>Date/Time</strong> — editable when modifying a transaction to backdate entries.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Insights: How the Donut Works</h3>
+            <ul>
+              <li>The chart draws only the currently selected sign: Income or Expense. If there are no entries for the selected sign, the app automatically switches to whichever has data.</li>
+              <li>Each segment maps to a Category or Name (based on grouping). Segment colors are derived deterministically from the label.</li>
+              <li>The left breakdown card lists contributors with percent values and absolute numbers to help you spot top items quickly.</li>
+              <li>The center overlay shows the total and a short scope label (e.g., "Expense · by categories").</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Seasonal Budgeting</h3>
+            <p>Designed for seasonal work: set a working season in Settings to enable off-season behavior. When off-season, the app exposes allowance cards and shows an Off-season badge so you can budget spending conservatively.</p>
+          </section>
+
+          <section>
+            <h3>Backups, Exports & Imports</h3>
+            <ul>
+              <li><strong>Share backup:</strong> Produces a JSON snapshot you can share via the OS share sheet.</li>
+              <li><strong>Email backup:</strong> Copies the JSON to your clipboard and opens your mail app for manual sending.</li>
+              <li><strong>Import backup:</strong> Replaces local data with the selected JSON snapshot. Always export a backup before importing to avoid accidental loss.</li>
+              <li>Local snapshots are saved automatically and kept in browser storage as a fail-safe until overwritten by new changes.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Settings & Personalization</h3>
+            <ul>
+              <li><strong>Theme:</strong> Toggle Light/Dark themes for improved readability in different environments.</li>
+              <li><strong>Date format:</strong> Choose how dates appear across History and Recent lists.</li>
+              <li><strong>Currency symbol:</strong> Set the symbol displayed after amounts.</li>
+              <li><strong>History Lock:</strong> Prevents accidental swipe-to-delete but still allows edits.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Troubleshooting & FAQs</h3>
+            <dl>
+              <dt>Q: The donut shows "No data to visualize yet" but I have transactions.</dt>
+              <dd>A: Make sure you've selected the correct side (Income vs Expense) and grouping. The app will auto-switch if the opposite side has data, but if your transactions are zero-valued or all filtered out they will not render.</dd>
+              <dt>Q: I imported a backup but don't see my data.</dt>
+              <dd>A: After import, try reloading the app. Also ensure the import file was a valid JSON snapshot created by the app's export flow.</dd>
+              <dt>Q: How do I preserve privacy?</dt>
+              <dd>A: All data is stored locally (IndexedDB and localStorage). Exported backups are JSON files you control. Do not share backups publicly if they contain sensitive details.</dd>
+            </dl>
+          </section>
+
+          <section>
+            <h3>Accessibility</h3>
+            <ul>
+              <li>Controls use large touch targets and high-contrast pills. Toggle the Light theme for higher contrast if needed.</li>
+              <li>The History list and graph legend use semantic roles and aria-live regions to announce changes where appropriate.</li>
+              <li>Keyboard users can use Tab to focus buttons; press Escape to close modals.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Advanced / Developer Notes</h3>
+            <ul>
+              <li>Transactions stored with structure: { id, amountCents, createdAt, name, category, note, recurring }.</li>
+              <li>Graph colors are derived from a small deterministic palette based on label hashing.</li>
+              <li>Service worker caches application shell; a local backup flag may prompt updates when a new service worker is installed.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Contact & Support</h3>
+            <p>If you still need help, export a backup via Settings → Share backup and provide it to support along with a description of the issue. Avoid sharing sensitive notes or personal data.</p>
+          </section>
         </div>
       </div>
     </div>

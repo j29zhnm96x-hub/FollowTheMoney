@@ -23,6 +23,7 @@
   const noteContainer = $('#noteContainer');
   const noteInput = $('#noteInput');
   const settingsModal = $('#settingsModal');
+  const helpModal = $('#helpModal');
   const themeToggleEl = $('#themeToggle');
   const btnClearAll = $('#btnClearAll');
   // Seasonal Budget elements
@@ -381,8 +382,8 @@
           return;
         }
       }
-      if(graphEmptyEl) graphEmptyEl.hidden = false;
       graphCanvas.style.visibility = 'hidden';
+      if(graphEmptyEl) graphEmptyEl.hidden = false;
       return;
     }
     graphCanvas.style.visibility = 'visible';
@@ -1286,6 +1287,9 @@
   function openSettings(){ settingsModal.hidden=false; syncSettingsUI(); }
   function closeSettings(){ settingsModal.hidden=true; }
 
+  function openHelp(){ if(helpModal) helpModal.hidden = false; }
+  function closeHelp(){ if(helpModal) helpModal.hidden = true; }
+
   function applyTheme(theme){
     const html = document.documentElement;
     html.classList.remove('theme-light','theme-dark');
@@ -1508,8 +1512,10 @@
   // Event bindings
   $('#btnAddIncome').addEventListener('click',()=>openSheet('income'));
   $('#btnAddExpense').addEventListener('click',()=>openSheet('expense'));
-  document.querySelectorAll('[data-dismiss]').forEach(el=> el.addEventListener('click',()=>{ if(el.closest('#sheet')) closeSheet(); if(el.closest('#settingsModal')) closeSettings(); }));
+  document.querySelectorAll('[data-dismiss]').forEach(el=> el.addEventListener('click',()=>{ if(el.closest('#sheet')) closeSheet(); if(el.closest('#settingsModal')) closeSettings(); if(el.closest('#helpModal')) closeHelp(); }));
   $('#btnSettings').addEventListener('click',openSettings);
+  const btnHelpManual = $('#btnHelpManual');
+  if(btnHelpManual) btnHelpManual.addEventListener('click', ()=>{ openHelp(); });
   $('#btnHistory').addEventListener('click',()=>{ 
     historyFilter = null; // clear filter
     homeScreen.classList.remove('active'); 
@@ -1841,6 +1847,7 @@
     if(e.key==='Escape'){
       if(!sheet.hidden) closeSheet();
       if(!settingsModal.hidden) closeSettings();
+      if(helpModal && !helpModal.hidden) closeHelp();
     }
   });
 
