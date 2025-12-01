@@ -69,6 +69,12 @@
   const graphEmptyEl = $('#graphEmpty');
   const graphTotalValueEl = $('#graphTotalValue');
   const graphTotalScopeEl = $('#graphTotalScope');
+  const graphMainEl = $('#graphMain');
+  const graphTimelineEl = $('#graphTimeline');
+  const timelineCanvas = $('#timelineCanvas');
+  const timelineEmptyEl = $('#timelineEmpty');
+  const btnGraphTimeline = $('#btnGraphTimeline');
+  // breakdown total element removed — no reference needed
   const graphGroupInputs = Array.from(document.querySelectorAll('input[name="graphGroup"]'));
 
   let sheetType = null; // 'income' | 'expense'
@@ -103,6 +109,7 @@
   let graphGrouping = 'category';
   let previousNonGraphScreen = 'home';
   let currentScreen = 'home';
+  let graphMode = 'classic'; // 'classic' | 'timeline'
   const graphColorCache = new Map();
   const graphPalette = ['#30d6a4','#ff4f6a','#6580ff','#f6c343','#58c7ff','#ff9fd5','#8be28b','#ffa25e','#ffd166','#b388ff'];
 
@@ -178,6 +185,7 @@
       renderRecent();
       if(!historyScreen.hidden) renderHistory();
       syncSettingsUI();
+      refreshGraphIfVisible();
     }
   }
 
@@ -349,7 +357,7 @@
       .sort((a,b)=> b.value - a.value);
   }
   function resizeGraphCanvas(){
-    if(!graphCanvas) return;
+    if(!graphCanvas || graphMode === 'timeline') return;
     const wrapper = graphCanvas.parentElement;
     if(!wrapper) return;
     const size = Math.min(wrapper.clientWidth || 0, wrapper.clientHeight || wrapper.clientWidth || 0) || 280;
@@ -365,7 +373,15 @@
       btn.classList.toggle('active', btn.dataset.graphType === graphType);
     });
   }
+
+  function setGraphEmptyState(isEmpty){
+    if(!graphEmptyEl) return;
+    graphEmptyEl.hidden = !isEmpty;
+    graphEmptyEl.style.display = isEmpty ? 'flex' : 'none';
+    graphEmptyEl.setAttribute('aria-hidden', isEmpty ? 'false' : 'true');
+  }
   function renderGraph(){
+    if(graphMode === 'timeline') return;
     if(!graphCanvas || !graphLegendEl) return;
     const ctx = graphCanvas.getContext('2d');
     if(!ctx) return;
@@ -375,6 +391,7 @@
     if(graphTotalValueEl){
       graphTotalValueEl.textContent = total>0 ? formatCurrency(total) : formatCurrency(0);
     }
+    // breakdown total label removed — totals remain shown in the chart overlay
     if(graphTotalScopeEl){
       const groupingLabel = graphGrouping === 'name' ? 'by names' : 'by categories';
       graphTotalScopeEl.textContent = total>0
@@ -394,11 +411,11 @@
         }
       }
       graphCanvas.style.visibility = 'hidden';
-      if(graphEmptyEl) graphEmptyEl.hidden = false;
+      setGraphEmptyState(true);
       return;
     }
     graphCanvas.style.visibility = 'visible';
-    if(graphEmptyEl) graphEmptyEl.hidden = true;
+    setGraphEmptyState(false);
     resizeGraphCanvas();
     ctx.clearRect(0,0,graphCanvas.width, graphCanvas.height);
     const centerX = graphCanvas.width/2;
@@ -428,10 +445,17 @@
       const text = document.createElement('span');
       text.className = 'legend-label';
       text.textContent = segment.label;
+      const amount = document.createElement('span');
+      amount.className = 'legend-amount';
+      amount.textContent = formatCurrency(segment.value);
+      const textWrap = document.createElement('div');
+      textWrap.className = 'legend-text';
+      textWrap.appendChild(text);
+      textWrap.appendChild(amount);
       const pct = document.createElement('strong');
       pct.textContent = `${percent}%`;
       legendItem.appendChild(dot);
-      legendItem.appendChild(text);
+      legendItem.appendChild(textWrap);
       legendItem.appendChild(pct);
       graphLegendEl.appendChild(legendItem);
     });
@@ -440,6 +464,134 @@
     const bodyStyles = window.getComputedStyle(document.body);
     ctx.fillStyle = bodyStyles.getPropertyValue('background-color') || 'rgba(15,16,36,0.9)';
     ctx.fill();
+  }
+
+  function resizeTimelineCanvas(){
+    if(!timelineCanvas || graphMode !== 'timeline') return;
+    const wrap = timelineCanvas.parentElement;
+    if(!wrap) return;
+    const width = wrap.clientWidth || 600;
+    const height = wrap.clientHeight || 320;
+    const dpr = window.devicePixelRatio || 1;
+    timelineCanvas.width = width * dpr;
+    timelineCanvas.height = height * dpr;
+    timelineCanvas.style.width = `${width}px`;
+    timelineCanvas.style.height = `${height}px`;
+  }
+
+  function buildTimelineSeries(limit=45){
+    const dayMap = new Map();
+    transactions.forEach(tx=>{
+      const date = new Date(tx.createdAt);
+      if(Number.isNaN(date)) return;
+      date.setHours(0,0,0,0);
+      const key = date.getTime();
+      if(!dayMap.has(key)) dayMap.set(key,{ income:0, expense:0 });
+      if(tx.amountCents >= 0){
+        dayMap.get(key).income += tx.amountCents;
+      } else {
+        dayMap.get(key).expense += Math.abs(tx.amountCents);
+      }
+    });
+    const keys = Array.from(dayMap.keys()).sort((a,b)=>a-b);
+    const trimmed = keys.slice(Math.max(0, keys.length-limit));
+    const labels = trimmed.map(ts=>({ ts, label: formatShortDate(ts) }));
+    const income = trimmed.map(ts=> (dayMap.get(ts).income||0)/100);
+    const expense = trimmed.map(ts=> (dayMap.get(ts).expense||0)/100);
+    return { labels, income, expense };
+  }
+
+  function renderTimelineGraph(){
+    if(graphMode !== 'timeline') return;
+    if(!timelineCanvas) return;
+    const { labels, income, expense } = buildTimelineSeries();
+    const hasData = labels.length >= 2 && (income.some(v=>v>0) || expense.some(v=>v>0));
+    if(timelineEmptyEl) timelineEmptyEl.hidden = hasData;
+    resizeTimelineCanvas();
+    const ctx = timelineCanvas.getContext('2d');
+    if(!ctx) return;
+    ctx.clearRect(0,0,timelineCanvas.width, timelineCanvas.height);
+    if(!hasData){
+      return;
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const width = timelineCanvas.width;
+    const height = timelineCanvas.height;
+    const padding = { top: 30*dpr, right: 60*dpr, bottom: 50*dpr, left: 80*dpr };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    const maxValue = Math.max(1, ...income, ...expense);
+    const yScale = chartHeight / maxValue;
+    const step = labels.length > 1 ? chartWidth / (labels.length - 1) : chartWidth;
+    ctx.lineWidth = 1*dpr;
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.font = `${12*dpr}px "Inter", system-ui, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    const yTicks = 4;
+    for(let i=0;i<=yTicks;i++){
+      const value = (maxValue / yTicks) * i;
+      const y = height - padding.bottom - value * yScale;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(width - padding.right, y);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.fillText(value.toFixed(0), padding.left - 10*dpr, y);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    }
+    const xTicks = Math.min(6, labels.length);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    for(let i=0;i<xTicks;i++){
+      const idx = Math.round((labels.length-1)/(xTicks-1 || 1) * i);
+      const x = padding.left + idx * step;
+      const y = height - padding.bottom + 6*dpr;
+      ctx.fillText(labels[idx].label, x, y);
+    }
+    const drawLine = (series, color)=>{
+      ctx.lineWidth = 3*dpr;
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      series.forEach((val,idx)=>{
+        const x = padding.left + idx * step;
+        const y = height - padding.bottom - val * yScale;
+        if(idx===0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+      series.forEach((val,idx)=>{
+        const x = padding.left + idx * step;
+        const y = height - padding.bottom - val * yScale;
+        ctx.beginPath();
+        ctx.arc(x,y,4*dpr,0,Math.PI*2);
+        ctx.fillStyle = '#05020c';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x,y,3*dpr,0,Math.PI*2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      });
+    };
+    drawLine(income, '#30d6a4');
+    drawLine(expense, '#ff4f6a');
+  }
+
+  function setGraphMode(mode){
+    const next = mode === 'timeline' ? 'timeline' : 'classic';
+    if(graphMode === next) return;
+    graphMode = next;
+    if(graphMainEl) graphMainEl.hidden = graphMode === 'timeline';
+    if(graphTimelineEl) graphTimelineEl.hidden = graphMode !== 'timeline';
+    if(btnGraphTimeline) btnGraphTimeline.setAttribute('aria-pressed', graphMode === 'timeline' ? 'true' : 'false');
+    if(graphMode === 'timeline'){
+      renderTimelineGraph();
+    } else {
+      resizeGraphCanvas();
+      renderGraph();
+    }
   }
   function isLandscapeMode(){
     return window.innerWidth > window.innerHeight + 80;
@@ -458,7 +610,11 @@
     currentScreen = 'graph';
     resizeGraphCanvas();
     updateGraphTypeButtons();
-    renderGraph();
+    if(graphMode === 'timeline'){
+      renderTimelineGraph();
+    } else {
+      renderGraph();
+    }
   }
   function hideGraphScreen(){
     if(!graphScreen || graphScreen.hidden) return;
@@ -494,7 +650,8 @@
   }
   function refreshGraphIfVisible(){
     if(graphScreen && !graphScreen.hidden){
-      renderGraph();
+      if(graphMode === 'timeline') renderTimelineGraph();
+      else renderGraph();
     }
   }
   function toLocalInputValue(timestamp){
@@ -1863,6 +2020,12 @@
       renderGraph();
     });
   });
+  if(btnGraphTimeline){
+    btnGraphTimeline.addEventListener('click',()=>{
+      const nextMode = graphMode === 'timeline' ? 'classic' : 'timeline';
+      setGraphMode(nextMode);
+    });
+  }
   function handleConfirm(e){
     if(e) e.preventDefault();
     if(confirmBtn.disabled) return;
@@ -2085,7 +2248,7 @@
 
   // Init
   openDB().then(d=>{ db=d; return Promise.all([dbGetAllTransactions(), dbGetSettings()]); })
-    .then(([txs,s])=>{ transactions=txs; settings={...settings,...s}; updateBalance(); applyRecurringIfNeeded(); syncSettingsUI(); updateSeasonalStats(); })
+    .then(([txs,s])=>{ transactions=txs; settings={...settings,...s}; updateBalance(); applyRecurringIfNeeded(); syncSettingsUI(); updateSeasonalStats(); refreshGraphIfVisible(); })
     .then(()=> scheduleLocalBackup('db-init'))
     .catch(err=>{
       console.error('DB init error', err);
@@ -2171,13 +2334,22 @@
 
   window.addEventListener('resize', ()=>{
     resizeGraphCanvas();
+    resizeTimelineCanvas();
     syncGraphScreenVisibility();
-    if(graphScreen && !graphScreen.hidden) renderGraph();
+    if(graphScreen && !graphScreen.hidden){
+      if(graphMode === 'timeline') renderTimelineGraph();
+      else renderGraph();
+    }
   });
   window.addEventListener('orientationchange', ()=>{
     setTimeout(()=>{
       resizeGraphCanvas();
+      resizeTimelineCanvas();
       syncGraphScreenVisibility();
+      if(graphScreen && !graphScreen.hidden){
+        if(graphMode === 'timeline') renderTimelineGraph();
+        else renderGraph();
+      }
     }, 150);
   });
   updateGraphTypeButtons();

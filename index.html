@@ -109,9 +109,19 @@
     <section id="screen-graph" class="screen" aria-label="Insights" hidden>
       <header class="graph-top-bar" role="banner">
         <h1 class="graph-title" aria-label="Insights">Insights</h1>
-        <div id="graphTypeFilters" class="graph-type-filters" role="group" aria-label="Graph Type">
-          <button class="graph-type-pill" data-graph-type="income">Income</button>
-          <button class="graph-type-pill" data-graph-type="expense">Expense</button>
+        <div class="graph-toolbar">
+          <button id="btnGraphTimeline" class="graph-icon-btn" type="button" aria-pressed="false" aria-label="Toggle timeline view">
+            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+              <rect x="4" y="11" width="3" height="7" rx="1" />
+              <rect x="9" y="8" width="3" height="10" rx="1" />
+              <rect x="14" y="5" width="3" height="13" rx="1" />
+              <rect x="19" y="3" width="3" height="15" rx="1" />
+            </svg>
+          </button>
+          <div id="graphTypeFilters" class="graph-type-filters" role="group" aria-label="Graph Type">
+            <button class="graph-type-pill" data-graph-type="income">Income</button>
+            <button class="graph-type-pill" data-graph-type="expense">Expense</button>
+          </div>
         </div>
         <div class="graph-view-toggle" role="radiogroup" aria-label="Group by">
           <label>
@@ -125,11 +135,10 @@
         </div>
       </header>
       <div class="graph-board">
-        <div class="graph-main">
+        <div class="graph-main" id="graphMain">
           <div class="graph-breakdown-card">
             <div class="graph-breakdown-header">
               <h2>Breakdown</h2>
-              <span class="graph-breakdown-hint">Top contributors</span>
             </div>
             <div class="graph-legend" id="graphLegend" aria-live="polite"></div>
           </div>
@@ -144,6 +153,24 @@
                 <canvas id="graphCanvas" width="340" height="340" aria-label="Distribution chart"></canvas>
                 <div id="graphEmpty" class="graph-empty" hidden>No data to visualize yet.</div>
               </div>
+            </div>
+          </div>
+        </div>
+        <div class="graph-timeline" id="graphTimeline" hidden>
+          <div class="graph-timeline-card">
+            <header class="timeline-header">
+              <div>
+                <h2>Timeline</h2>
+                <p class="timeline-subtitle">Income vs Expense over time</p>
+              </div>
+              <div class="timeline-legend">
+                <span><span class="dot income"></span> Income</span>
+                <span><span class="dot expense"></span> Expense</span>
+              </div>
+            </header>
+            <div class="timeline-canvas-wrap">
+              <canvas id="timelineCanvas" width="720" height="360" aria-label="Timeline chart"></canvas>
+              <div id="timelineEmpty" class="timeline-empty" hidden>Need at least two days of data to draw trends.</div>
             </div>
           </div>
         </div>
