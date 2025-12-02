@@ -79,6 +79,7 @@
   const timelinePopupDateEl = $('#timelinePopupDate');
   const timelinePopupListEl = $('#timelinePopupList');
   const btnGraphTimeline = $('#btnGraphTimeline');
+  const btnTimelineCursorToggle = $('#btnTimelineCursorToggle');
   // breakdown total element removed — no reference needed
   const graphGroupInputs = Array.from(document.querySelectorAll('input[name="graphGroup"]'));
 
@@ -122,6 +123,7 @@
   let timelineChartMeta = null;
   let timelineCursorIndex = null;
   let timelineDragActive = false;
+  let timelineCursorEnabled = false;
 
   // IndexedDB setup
   const DB_NAME = 'followthemoney_plain';
@@ -209,7 +211,7 @@
     if(!timelineCanvasWrap || !timelineCursorEl || !timelinePopupEl) return;
     const labels = timelineSeriesData ? timelineSeriesData.labels : [];
     const count = labels ? labels.length : 0;
-    if(!count || graphMode !== 'timeline' || !timelineChartMeta){
+    if(!count || graphMode !== 'timeline' || !timelineChartMeta || !timelineCursorEnabled){
       hideTimelineCursorUI();
       return;
     }
@@ -232,6 +234,7 @@
     const cssX = xDevice / dpr;
     const wrapWidth = cssWidth || (timelineCanvas ? timelineCanvas.getBoundingClientRect().width : 0) || 1;
     const percent = Math.max(0, Math.min(100, (cssX / wrapWidth) * 100));
+    
     timelineCanvasWrap.style.setProperty('--cursor-left', `${percent}%`);
     timelineCanvasWrap.classList.add('showing-cursor');
     timelineCursorEl.hidden = false;
@@ -251,8 +254,7 @@
       timelinePopupListEl.appendChild(empty);
       return;
     }
-    const limit = 8;
-    entries.slice(0, limit).forEach(tx=>{
+    entries.forEach(tx=>{
       const li = document.createElement('li');
       li.className = tx.amountCents >= 0 ? 'income' : 'expense';
       const labelSpan = document.createElement('span');
@@ -263,12 +265,6 @@
       li.append(labelSpan, amountStrong);
       timelinePopupListEl.appendChild(li);
     });
-    if(entries.length > limit){
-      const more = document.createElement('li');
-      more.className = 'timeline-popup-empty';
-      more.textContent = `+${entries.length - limit} more`;
-      timelinePopupListEl.appendChild(more);
-    }
   }
 
   function updateTimelineCursorFromEvent(evt){
@@ -295,7 +291,7 @@
   }
 
   function handleTimelinePointerDown(evt){
-    if(graphMode !== 'timeline') return;
+    if(graphMode !== 'timeline' || !timelineCursorEnabled) return;
     if(!timelineCanvas || !timelineSeriesData || !timelineSeriesData.labels.length) return;
     timelineDragActive = true;
     if(timelineCanvas.setPointerCapture) timelineCanvas.setPointerCapture(evt.pointerId);
@@ -2212,6 +2208,21 @@
     btnGraphTimeline.addEventListener('click',()=>{
       const nextMode = graphMode === 'timeline' ? 'classic' : 'timeline';
       setGraphMode(nextMode);
+    });
+  }
+  if(btnTimelineCursorToggle){
+    btnTimelineCursorToggle.addEventListener('click',()=>{
+      timelineCursorEnabled = !timelineCursorEnabled;
+      btnTimelineCursorToggle.classList.toggle('active', timelineCursorEnabled);
+      btnTimelineCursorToggle.setAttribute('aria-pressed', timelineCursorEnabled ? 'true' : 'false');
+      if(!timelineCursorEnabled){
+        hideTimelineCursorUI();
+      } else if(timelineSeriesData && timelineSeriesData.labels.length){
+        if(typeof timelineCursorIndex !== 'number' || timelineCursorIndex < 0){
+          timelineCursorIndex = timelineSeriesData.labels.length - 1;
+        }
+        refreshTimelineCursorUI();
+      }
     });
   }
   if(timelineCanvas){

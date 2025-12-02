@@ -163,9 +163,12 @@
                 <h2>Timeline</h2>
                 <p class="timeline-subtitle">Income vs Expense over time</p>
               </div>
-              <div class="timeline-legend">
-                <span><span class="dot income"></span> Income</span>
-                <span><span class="dot expense"></span> Expense</span>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.5rem;">
+                <button id="btnTimelineCursorToggle" class="timeline-cursor-toggle" type="button" aria-pressed="false">Inspect</button>
+                <div class="timeline-legend">
+                  <span><span class="dot income"></span> Income</span>
+                  <span><span class="dot expense"></span> Expense</span>
+                </div>
               </div>
             </header>
             <div class="timeline-canvas-wrap" id="timelineCanvasWrap">
