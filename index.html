@@ -176,7 +176,13 @@
               <div id="timelineEmpty" class="timeline-empty" hidden>Need at least two days of data to draw trends.</div>
               <div id="timelineCursor" class="timeline-cursor" hidden aria-hidden="true"></div>
               <div id="timelineCursorPopup" class="timeline-popup" hidden aria-live="polite">
-                <p id="timelinePopupDate" class="timeline-popup-date"></p>
+                <p id="timelinePopupDate" class="timeline-popup-date">
+                  <span id="timelinePopupDateText"></span>
+                  <span class="timeline-scroll-indicators">
+                    <span class="timeline-scroll-arrow up" id="timelineScrollArrowUp"></span>
+                    <span class="timeline-scroll-arrow down" id="timelineScrollArrowDown"></span>
+                  </span>
+                </p>
                 <ul id="timelinePopupList" class="timeline-popup-list"></ul>
               </div>
             </div>
@@ -223,20 +229,28 @@
             <section class="settings-card" aria-labelledby="seasonHeading">
               <div>
                 <h3 id="seasonHeading">Seasonal Budget</h3>
-                <p class="card-subtitle">Set the working season so the app can guide off-season spending.</p>
+                <p class="card-subtitle">Enable seasonal mode or use simple budget tracking.</p>
               </div>
-              <div class="setting-row">
-                <label for="seasonStart" class="small-label">Start of working season</label>
-                <input id="seasonStart" type="date" class="text-input date-compact" />
-              </div>
-              <div class="setting-row">
-                <label for="seasonEnd" class="small-label">End of working season</label>
-                <input id="seasonEnd" type="date" class="text-input date-compact" />
-              </div>
-              <button id="saveSeason" class="btn accent" disabled>Save Season Dates</button>
-              <div class="setting-row">
-                <div id="seasonInfo" class="preview small"></div>
-                <div id="allowanceInfo" class="preview small"></div>
+              <label class="toggle-row switch">
+                <input type="checkbox" id="seasonalModeToggle">
+                <span class="switch-ui" aria-hidden="true"><span class="switch-thumb"></span></span>
+                <span>Seasonal Budget Mode</span>
+              </label>
+              <div class="preview small">When off, dashboard shows Today/This Week/This Month income & expenses.</div>
+              <div id="seasonalSettings" class="seasonal-settings">
+                <div class="setting-row">
+                  <label for="seasonStart" class="small-label">Start of working season</label>
+                  <input id="seasonStart" type="date" class="text-input date-compact" />
+                </div>
+                <div class="setting-row">
+                  <label for="seasonEnd" class="small-label">End of working season</label>
+                  <input id="seasonEnd" type="date" class="text-input date-compact" />
+                </div>
+                <button id="saveSeason" class="btn accent" disabled>Save Season Dates</button>
+                <div class="setting-row">
+                  <div id="seasonInfo" class="preview small"></div>
+                  <div id="allowanceInfo" class="preview small"></div>
+                </div>
               </div>
             </section>
             <section class="settings-card" aria-labelledby="privacyHeading">
@@ -300,118 +314,204 @@
         </div>
         <div class="help-content" aria-live="polite">
           <section>
-            <h3>Overview</h3>
-            <p>FollowTheMoney is a compact, privacy-first money tracking app focused on simple entry, quick review, and clear visual insights. It supports income and expense recording, history browsing with filters, and a donut-style Insights view for high-level breakdowns.</p>
+            <h3>Welcome to FollowTheMoney</h3>
+            <p>FollowTheMoney is a privacy-first money tracking app designed for simplicity and clarity. Track income and expenses, explore visual insights, and choose between Budget Mode for daily tracking or Seasonal Budget Mode for off-season planning. All your data stays on your device—no cloud, no tracking.</p>
           </section>
 
           <section>
             <h3>Quick Start</h3>
             <ol>
-              <li>Open the app and tap the green <em>Add Income</em> or red <em>Add Expense</em> circle on the Home screen.</li>
-              <li>Enter the amount using the numeric keypad. Amounts are stored as cents (two decimals) and will display using your chosen currency symbol.</li>
-              <li>Choose or type a <strong>Category</strong> (required) and a <strong>Name</strong> (optional but recommended) to group and attribute the transaction.</li>
-              <li>Optionally add a note or change the transaction date/time when editing.</li>
-              <li>Tap <em>Add</em> (or <em>Save Changes</em> when editing) to persist the transaction.</li>
+              <li>Tap the <strong>green circle</strong> (Income) or <strong>red circle</strong> (Expense) on the Home screen.</li>
+              <li>Enter the amount using the numeric keypad (stored as cents with two decimals).</li>
+              <li>Choose or type a <strong>Category</strong> (required) and <strong>Name</strong> (optional but recommended).</li>
+              <li>Optionally tap "Add note" to include additional context.</li>
+              <li>Tap <strong>Add</strong> to save the transaction.</li>
             </ol>
           </section>
 
           <section>
-            <h3>Screens & Controls</h3>
-            <h4>Home</h4>
-            <p>Shows your current balance, three allowance cards (daily/weekly/monthly when relevant), and the most recent transactions. Use the floating add buttons to create new entries quickly.</p>
-
-            <h4>History</h4>
+            <h3>Home Screen</h3>
+            <p><strong>Balance:</strong> Shows your current total (income minus expenses).</p>
+            <p><strong>Badge:</strong> Displays "Budget mode" by default, or "Off-season"/"Season active" when Seasonal Budget Mode is enabled.</p>
+            <p><strong>Dashboard Cards:</strong></p>
             <ul>
-              <li><strong>Type filters:</strong> Use the Income/All/Expense pills to limit visible items by transaction sign.</li>
-              <li><strong>Chip rows:</strong> Category and Name chips appear below the filters. Tap a chip to limit History to that value. Use the pill labeled <em>All</em> to clear.</li>
-              <li><strong>Group summary:</strong> A summary card shows totals for the current filter set.</li>
-              <li><strong>Edit & Delete:</strong> Tap the pencil icon on a transaction to edit. Swipe left/right to delete (swipe disabled when History Lock is on).</li>
+              <li><strong>Budget Mode (default):</strong> Cards show <em>Today</em>, <em>This Week</em>, and <em>This Month</em> with income (green) and expenses (red) totals.</li>
+              <li><strong>Seasonal Budget Mode:</strong> Cards display <em>Daily</em>, <em>Weekly</em>, and <em>Monthly</em> allowances with actual spending during off-season periods.</li>
+            </ul>
+            <p><strong>Recent Transactions:</strong> Quick view of your latest entries. Tap any item to edit.</p>
+          </section>
+
+          <section>
+            <h3>History Screen</h3>
+            <p><strong>Type Filters:</strong> Use the <em>Income</em>, <em>All</em>, or <em>Expense</em> pills at the top to filter transactions by type.</p>
+            <p><strong>Category & Name Chips:</strong> Filter by category or name by tapping the chips below the type filters. Tap "All categories" or "All names" to clear the filter.</p>
+            <p><strong>Group Summary:</strong> A blue summary card shows totals and entry count for your current filter selection. <em>Long-press</em> to open detailed breakdown.</p>
+            <p><strong>Editing Transactions:</strong></p>
+            <ul>
+              <li>Tap the <strong>pencil icon</strong> on any transaction to edit.</li>
+              <li><strong>Swipe left or right</strong> to delete (disabled when History Lock is on in Settings).</li>
+              <li>When editing, you can modify amount, category, name, note, date/time, and set recurring frequency.</li>
+            </ul>
+            <p><strong>Recurring Transactions:</strong> When editing a transaction, enable "Repeat this transaction" and choose Weekly, Monthly, or Yearly frequency.</p>
+          </section>
+
+          <section>
+            <h3>Insights Screen</h3>
+            <p><strong>Best viewed in landscape mode.</strong> The Insights screen visualizes your financial data with interactive charts.</p>
+            
+            <h4>Classic View (Donut Chart)</h4>
+            <ul>
+              <li><strong>Breakdown Card (left):</strong> Lists categories or names with percentages and amounts.</li>
+              <li><strong>Donut Chart (right):</strong> Visual pie chart showing proportions of each category/name.</li>
+              <li><strong>Center Overlay:</strong> Shows total amount and current scope (e.g., "Expense · by categories").</li>
+              <li><strong>Controls:</strong> Toggle between Income/Expense and group by Categories or Names.</li>
             </ul>
 
-            <h4>Insights</h4>
-            <p>Best viewed in landscape: the screen is split into two cards. The left card lists a <strong>Breakdown</strong> (legend and top contributors). The right card shows a donut chart representing shared percentages. Controls at the top choose between Income vs Expense and grouping by Categories or Names.</p>
-          </section>
-
-          <section>
-            <h3>Adding & Editing Transactions (Detailed)</h3>
-            <p>When creating or editing an entry, these fields are available:</p>
+            <h4>Timeline View</h4>
+            <p>Tap the <strong>bar chart icon</strong> at the top to switch to Timeline mode.</p>
             <ul>
-              <li><strong>Amount</strong> — numeric keypad accepts digits; internal storage uses cents.</li>
-              <li><strong>Category</strong> — required. Categories are used for grouping in Insights and History.</li>
-              <li><strong>Name</strong> — optional. Helps attribute recurring sources or payees.</li>
-              <li><strong>Note</strong> — optional free-text for context.</li>
-              <li><strong>Date/Time</strong> — editable when modifying a transaction to backdate entries.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3>Insights: How the Donut Works</h3>
-            <ul>
-              <li>The chart draws only the currently selected sign: Income or Expense. If there are no entries for the selected sign, the app automatically switches to whichever has data.</li>
-              <li>Each segment maps to a Category or Name (based on grouping). Segment colors are derived deterministically from the label.</li>
-              <li>The left breakdown card lists contributors with percent values and absolute numbers to help you spot top items quickly.</li>
-              <li>The center overlay shows the total and a short scope label (e.g., "Expense · by categories").</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3>Seasonal Budgeting</h3>
-            <p>Designed for seasonal work: set a working season in Settings to enable off-season behavior. When off-season, the app exposes allowance cards and shows an Off-season badge so you can budget spending conservatively.</p>
-          </section>
-
-          <section>
-            <h3>Backups, Exports & Imports</h3>
-            <ul>
-              <li><strong>Share backup:</strong> Produces a JSON snapshot you can share via the OS share sheet.</li>
-              <li><strong>Email backup:</strong> Copies the JSON to your clipboard and opens your mail app for manual sending.</li>
-              <li><strong>Import backup:</strong> Replaces local data with the selected JSON snapshot. Always export a backup before importing to avoid accidental loss.</li>
-              <li>Local snapshots are saved automatically and kept in browser storage as a fail-safe until overwritten by new changes.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3>Settings & Personalization</h3>
-            <ul>
-              <li><strong>Theme:</strong> Toggle Light/Dark themes for improved readability in different environments.</li>
-              <li><strong>Date format:</strong> Choose how dates appear across History and Recent lists.</li>
-              <li><strong>Currency symbol:</strong> Set the symbol displayed after amounts.</li>
-              <li><strong>History Lock:</strong> Prevents accidental swipe-to-delete but still allows edits.</li>
+              <li><strong>Line Graph:</strong> Shows income (green) and expense (red) trends over time.</li>
+              <li><strong>Inspect Mode:</strong> Tap the "Inspect" button to enable interactive cursor.</li>
+              <li><strong>Draggable Cursor:</strong> Drag the vertical line across the timeline to view transactions for specific days.</li>
+              <li><strong>Popup Details:</strong> Shows date and transaction list. <em>Scroll indicators</em> (arrows) appear when there are more than 2 transactions:
+                <ul>
+                  <li><strong>Down arrow (▼):</strong> More content below</li>
+                  <li><strong>Up arrow (▲):</strong> More content above</li>
+                  <li>Both arrows visible when in the middle of the list</li>
+                </ul>
+              </li>
+              <li>Scroll inside the popup to view all transactions for that day.</li>
             </ul>
           </section>
 
           <section>
-            <h3>Troubleshooting & FAQs</h3>
+            <h3>Settings</h3>
+            
+            <h4>General</h4>
+            <ul>
+              <li><strong>Theme Toggle:</strong> Switch between Light and Dark themes (top-right).</li>
+              <li><strong>Date Format:</strong> Choose Day/Month/Year, Month/Day/Year, or Year/Month/Day.</li>
+              <li><strong>Currency Symbol:</strong> Customize the symbol displayed after amounts (€, $, etc.).</li>
+            </ul>
+
+            <h4>Seasonal Budget</h4>
+            <ul>
+              <li><strong>Toggle Switch:</strong> Turn Seasonal Budget Mode on or off.
+                <ul>
+                  <li><strong>Off (default):</strong> Dashboard shows Today/This Week/This Month totals.</li>
+                  <li><strong>On:</strong> Dashboard shows Daily/Weekly/Monthly allowances during off-season.</li>
+                </ul>
+              </li>
+              <li><strong>Season Dates:</strong> When enabled, set working season start/end dates to calculate off-season allowances.</li>
+            </ul>
+
+            <h4>History Lock</h4>
+            <p>Enable to prevent accidental swipe-to-delete in History. You can still edit transactions using the pencil icon.</p>
+
+            <h4>Data Export & Import</h4>
+            <ul>
+              <li><strong>Share backup:</strong> Creates a JSON file you can share via your device's share sheet.</li>
+              <li><strong>Email backup:</strong> Copies JSON to clipboard and opens your mail app.</li>
+              <li><strong>Import backup:</strong> Restore data from a JSON backup file. <em>Warning:</em> This replaces all current data—export first!</li>
+              <li>Automatic local backups are saved in browser storage as a safety net.</li>
+            </ul>
+
+            <h4>Advanced</h4>
+            <p><strong>Clear All Data:</strong> Deletes all transactions and resets settings. A confirmation dialog will appear before deletion.</p>
+          </section>
+
+          <section>
+            <h3>Adding & Editing Transactions</h3>
+            <p><strong>When creating:</strong></p>
+            <ul>
+              <li><strong>Amount:</strong> Use the numeric keypad (stored internally as cents).</li>
+              <li><strong>Category:</strong> Required field. Used for grouping in Insights and filtering in History.</li>
+              <li><strong>Name:</strong> Optional. Becomes required once you enter a category. Helps identify specific sources or payees.</li>
+              <li><strong>Note:</strong> Optional. Tap "Add note" to include free-text details.</li>
+            </ul>
+            
+            <p><strong>When editing:</strong></p>
+            <ul>
+              <li>All above fields plus:</li>
+              <li><strong>Date/Time:</strong> Adjust to backdate entries.</li>
+              <li><strong>Recurring:</strong> Enable "Repeat this transaction" and select frequency (Weekly/Monthly/Yearly).</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Tips & Best Practices</h3>
+            <ul>
+              <li><strong>Use consistent categories:</strong> Autocomplete suggestions help you reuse existing categories and names.</li>
+              <li><strong>Add names for clarity:</strong> While optional, names make it easier to identify transactions later.</li>
+              <li><strong>Long-press for details:</strong> In History, long-press the group summary card to see detailed breakdowns.</li>
+              <li><strong>Long-press to delete chips:</strong> Remove unwanted categories or names from suggestions by long-pressing chips.</li>
+              <li><strong>Export regularly:</strong> Back up your data periodically via Settings → Share backup.</li>
+              <li><strong>Use Budget Mode for simplicity:</strong> If you don't need seasonal tracking, keep Seasonal Budget Mode off for straightforward daily/weekly/monthly summaries.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Troubleshooting</h3>
             <dl>
-              <dt>Q: The donut shows "No data to visualize yet" but I have transactions.</dt>
-              <dd>A: Make sure you've selected the correct side (Income vs Expense) and grouping. The app will auto-switch if the opposite side has data, but if your transactions are zero-valued or all filtered out they will not render.</dd>
+              <dt>Q: The donut chart says "No data to visualize yet" but I have transactions.</dt>
+              <dd>A: Ensure you've selected the correct type (Income or Expense). The app auto-switches if the opposite side has data, but zero-value transactions won't render.</dd>
+              
+              <dt>Q: Dashboard cards aren't updating after toggling Seasonal Budget Mode.</dt>
+              <dd>A: Close and reopen Settings, or navigate to another screen and back. The cards should refresh automatically.</dd>
+              
+              <dt>Q: I can't delete transactions in History.</dt>
+              <dd>A: Check if History Lock is enabled in Settings. Disable it to allow swipe-to-delete.</dd>
+              
+              <dt>Q: Recurring transactions aren't being created automatically.</dt>
+              <dd>A: Recurring frequency is stored with the transaction for reference but doesn't trigger automatic creation yet. This feature is planned for future updates.</dd>
+              
+              <dt>Q: Timeline graph arrows aren't showing.</dt>
+              <dd>A: Arrows only appear when there are more than 2 transactions for the selected day. Enable "Inspect" mode and drag to a busy day.</dd>
+              
+              <dt>Q: Where is my data stored?</dt>
+              <dd>A: All data is stored locally in your browser's IndexedDB and localStorage. Nothing is sent to external servers.</dd>
+              
               <dt>Q: I imported a backup but don't see my data.</dt>
-              <dd>A: After import, try reloading the app. Also ensure the import file was a valid JSON snapshot created by the app's export flow.</dd>
-              <dt>Q: How do I preserve privacy?</dt>
-              <dd>A: All data is stored locally (IndexedDB and localStorage). Exported backups are JSON files you control. Do not share backups publicly if they contain sensitive details.</dd>
+              <dd>A: Reload the app after importing. Ensure the JSON file is a valid backup created by this app's export feature.</dd>
             </dl>
           </section>
 
           <section>
-            <h3>Accessibility</h3>
+            <h3>Privacy & Security</h3>
             <ul>
-              <li>Controls use large touch targets and high-contrast pills. Toggle the Light theme for higher contrast if needed.</li>
-              <li>The History list and graph legend use semantic roles and aria-live regions to announce changes where appropriate.</li>
-              <li>Keyboard users can use Tab to focus buttons; press Escape to close modals.</li>
+              <li><strong>No cloud sync:</strong> Your data never leaves your device.</li>
+              <li><strong>No tracking:</strong> The app doesn't collect analytics or usage data.</li>
+              <li><strong>Local storage only:</strong> Uses browser IndexedDB and localStorage.</li>
+              <li><strong>Export control:</strong> You control all backups—share them only with trusted parties.</li>
+              <li><strong>PWA support:</strong> Install as a Progressive Web App for offline access and a native-like experience.</li>
             </ul>
           </section>
 
           <section>
-            <h3>Advanced / Developer Notes</h3>
+            <h3>Keyboard Shortcuts & Accessibility</h3>
             <ul>
-              <li>Transactions stored with structure: { id, amountCents, createdAt, name, category, note, recurring }.</li>
-              <li>Graph colors are derived from a small deterministic palette based on label hashing.</li>
-              <li>Service worker caches application shell; a local backup flag may prompt updates when a new service worker is installed.</li>
+              <li>Press <strong>Tab</strong> to navigate between buttons and inputs.</li>
+              <li>Press <strong>Escape</strong> to close modals and sheets.</li>
+              <li>Large touch targets for mobile-friendly interaction.</li>
+              <li>High-contrast Light theme available for improved visibility.</li>
+              <li>Aria-live regions announce changes in History and Insights.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Technical Details</h3>
+            <ul>
+              <li><strong>Data structure:</strong> Transactions stored as { id, amountCents, createdAt, name, category, note, recurringFrequency }.</li>
+              <li><strong>Color system:</strong> Chart colors derived deterministically from category/name labels using a hash-based palette.</li>
+              <li><strong>Service Worker:</strong> Caches app shell for offline use. Updates trigger automatic reload when available.</li>
+              <li><strong>No dependencies:</strong> Built with vanilla JavaScript—no external frameworks.</li>
             </ul>
           </section>
 
           <section>
             <h3>Contact & Support</h3>
-            <p>If you still need help, export a backup via Settings → Share backup and provide it to support along with a description of the issue. Avoid sharing sensitive notes or personal data.</p>
+            <p>Need help? Export a backup (Settings → Share backup) and describe your issue. Avoid including sensitive personal information in support requests.</p>
+            <p>For feature requests or bug reports, provide clear steps to reproduce the issue along with your browser/device information.</p>
           </section>
         </div>
       </div>
@@ -442,6 +542,20 @@
           <label for="editDateInput" class="small-label">Transaction date & time</label>
           <input id="editDateInput" type="datetime-local" class="text-input" />
           <div class="preview small">Adjust this when editing to backdate entries.</div>
+        </div>
+        <div id="recurringContainer" class="recurring-container" hidden>
+          <label class="recurring-toggle-label">
+            <input id="recurringToggle" type="checkbox" />
+            <span>Repeat this transaction</span>
+          </label>
+          <div id="recurringFrequency" class="recurring-frequency" hidden>
+            <label for="frequencySelect" class="small-label">Frequency</label>
+            <select id="frequencySelect" class="text-input">
+              <option value="weekly">Weekly</option>
+              <option value="monthly" selected>Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
         </div>
         <button id="confirmBtn" class="btn primary full" disabled>Add</button>
       </div>

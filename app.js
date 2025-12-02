@@ -27,6 +27,8 @@
   const themeToggleEl = $('#themeToggle');
   const btnClearAll = $('#btnClearAll');
   // Seasonal Budget elements
+  const seasonalModeToggle = $('#seasonalModeToggle');
+  const seasonalSettingsEl = $('#seasonalSettings');
   const seasonStartEl = $('#seasonStart');
   const seasonEndEl = $('#seasonEnd');
   const saveSeasonBtn = $('#saveSeason');
@@ -55,6 +57,10 @@
   const btnSummaryBack = $('#btnSummaryBack');
   const editDateContainer = $('#editDateContainer');
   const editDateInput = $('#editDateInput');
+  const recurringContainer = $('#recurringContainer');
+  const recurringToggle = $('#recurringToggle');
+  const recurringFrequency = $('#recurringFrequency');
+  const frequencySelect = $('#frequencySelect');
   const dateFormatEl = $('#dateFormat');
   const currencySymbolInput = $('#currencySymbol');
   const btnExportShare = $('#btnExportShare');
@@ -77,7 +83,10 @@
   const timelineCursorEl = $('#timelineCursor');
   const timelinePopupEl = $('#timelineCursorPopup');
   const timelinePopupDateEl = $('#timelinePopupDate');
+  const timelinePopupDateText = $('#timelinePopupDateText');
   const timelinePopupListEl = $('#timelinePopupList');
+  const timelineScrollArrowUp = $('#timelineScrollArrowUp');
+  const timelineScrollArrowDown = $('#timelineScrollArrowDown');
   const btnGraphTimeline = $('#btnGraphTimeline');
   const btnTimelineCursorToggle = $('#btnTimelineCursorToggle');
   // breakdown total element removed — no reference needed
@@ -99,6 +108,7 @@
     recurringAmountCents:0, 
     lastRecurringAppliedMonth:null, 
     theme: 'light',
+    seasonalMode: false,
     seasonStart: null,
     seasonEnd: null,
     seasonIncomeCents: 0,
@@ -239,8 +249,39 @@
     timelineCanvasWrap.classList.add('showing-cursor');
     timelineCursorEl.hidden = false;
     timelinePopupEl.hidden = false;
-    if(timelinePopupDateEl) timelinePopupDateEl.textContent = formatDateTime(label.ts,false);
+    if(timelinePopupDateText) timelinePopupDateText.textContent = formatDateTime(label.ts,false);
     renderTimelinePopupList(label.ts);
+  }
+
+  function updateTimelineScrollArrows(){
+    if(!timelinePopupListEl || !timelineScrollArrowUp || !timelineScrollArrowDown) return;
+    const entries = timelinePopupListEl.querySelectorAll('li:not(.timeline-popup-empty)').length;
+    
+    // Only show arrows if more than 2 transactions
+    if(entries <= 2){
+      timelineScrollArrowUp.classList.remove('visible');
+      timelineScrollArrowDown.classList.remove('visible');
+      return;
+    }
+    
+    const scrollTop = timelinePopupListEl.scrollTop;
+    const scrollHeight = timelinePopupListEl.scrollHeight;
+    const clientHeight = timelinePopupListEl.clientHeight;
+    const scrollBottom = scrollHeight - scrollTop - clientHeight;
+    
+    // Show up arrow if not at top
+    if(scrollTop > 1){
+      timelineScrollArrowUp.classList.add('visible');
+    } else {
+      timelineScrollArrowUp.classList.remove('visible');
+    }
+    
+    // Show down arrow if not at bottom
+    if(scrollBottom > 1){
+      timelineScrollArrowDown.classList.add('visible');
+    } else {
+      timelineScrollArrowDown.classList.remove('visible');
+    }
   }
 
   function renderTimelinePopupList(ts){
@@ -252,10 +293,10 @@
       empty.className = 'timeline-popup-empty';
       empty.textContent = 'No transactions on this day';
       timelinePopupListEl.appendChild(empty);
+      updateTimelineScrollArrows();
       return;
     }
-    const limit = 8;
-    entries.slice(0, limit).forEach(tx=>{
+    entries.forEach(tx=>{
       const li = document.createElement('li');
       li.className = tx.amountCents >= 0 ? 'income' : 'expense';
       const labelSpan = document.createElement('span');
@@ -266,12 +307,8 @@
       li.append(labelSpan, amountStrong);
       timelinePopupListEl.appendChild(li);
     });
-    if(entries.length > limit){
-      const more = document.createElement('li');
-      more.className = 'timeline-popup-empty';
-      more.textContent = `+${entries.length - limit} more`;
-      timelinePopupListEl.appendChild(more);
-    }
+    // Update arrows after rendering
+    updateTimelineScrollArrows();
   }
 
   function updateTimelineCursorFromEvent(evt){
@@ -1796,6 +1833,25 @@
         if(editDateInput) editDateInput.value='';
       }
     }
+    if(recurringContainer){
+      if(sheetMode==='edit' && editingTransaction){
+        recurringContainer.hidden=false;
+        if(recurringToggle){
+          recurringToggle.checked = !!(editingTransaction.recurringFrequency);
+          if(recurringFrequency) recurringFrequency.hidden = !recurringToggle.checked;
+        }
+        if(frequencySelect && editingTransaction.recurringFrequency){
+          frequencySelect.value = editingTransaction.recurringFrequency;
+        } else if(frequencySelect){
+          frequencySelect.value = 'monthly';
+        }
+      } else {
+        recurringContainer.hidden=true;
+        if(recurringToggle) recurringToggle.checked = false;
+        if(recurringFrequency) recurringFrequency.hidden = true;
+        if(frequencySelect) frequencySelect.value = 'monthly';
+      }
+    }
     confirmBtn.textContent = sheetMode==='edit' ? 'Save Changes' : (type==='expense'?'Add Expense':'Add Income');
     setTimeout(()=>rawDigits.focus(),100);
   }
@@ -1828,6 +1884,10 @@
     }
     if(editDateContainer) editDateContainer.hidden=true;
     if(editDateInput) editDateInput.value='';
+    if(recurringContainer) recurringContainer.hidden=true;
+    if(recurringToggle) recurringToggle.checked = false;
+    if(recurringFrequency) recurringFrequency.hidden = true;
+    if(frequencySelect) frequencySelect.value = 'monthly';
     rawDigits.value='0';
     confirmBtn.textContent='Add Income';
     sheetAmountEl.textContent = formatCurrency(0);
@@ -1856,6 +1916,8 @@
     if(dateFormatEl) dateFormatEl.value = settings.dateFormat || 'dmy';
     if(currencySymbolInput) currencySymbolInput.value = settings.currencySymbol || '€';
     if(historyLockToggle) historyLockToggle.checked = !!settings.historyLocked;
+    if(seasonalModeToggle) seasonalModeToggle.checked = !!settings.seasonalMode;
+    if(seasonalSettingsEl) seasonalSettingsEl.classList.toggle('hidden', !settings.seasonalMode);
     normalizeCollections();
     refreshCategoryOptions();
     refreshNameOptions();
@@ -1885,6 +1947,100 @@
       }catch(_){ /* ignore */ }
     }
     saveSeasonBtn.disabled = !valid;
+  }
+
+  function computeBudgetStats(txs, now){
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0,0,0,0);
+    const todayMs = startOfToday.getTime();
+    
+    const startOfWeek = new Date(startOfToday);
+    const dayOfWeek = startOfWeek.getDay();
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startOfWeek.setDate(startOfWeek.getDate() - diff);
+    const weekMs = startOfWeek.getTime();
+    
+    const startOfMonth = new Date(startOfToday);
+    startOfMonth.setDate(1);
+    const monthMs = startOfMonth.getTime();
+    
+    const today = { income: 0, expense: 0 };
+    const week = { income: 0, expense: 0 };
+    const month = { income: 0, expense: 0 };
+    
+    txs.forEach(tx => {
+      const isIncome = tx.amountCents >= 0;
+      const amount = Math.abs(tx.amountCents);
+      
+      if(tx.createdAt >= todayMs){
+        if(isIncome) today.income += amount;
+        else today.expense += amount;
+      }
+      if(tx.createdAt >= weekMs){
+        if(isIncome) week.income += amount;
+        else week.expense += amount;
+      }
+      if(tx.createdAt >= monthMs){
+        if(isIncome) month.income += amount;
+        else month.expense += amount;
+      }
+    });
+    
+    return { today, week, month };
+  }
+
+  function updateDashboardCard(period, label, allowance, spent){
+    const card = document.querySelector(`.dashboard-card[data-period="${period}"]`);
+    if(!card) return;
+    const labelEl = card.querySelector('.card-label');
+    if(labelEl) labelEl.textContent = label;
+    
+    // Remove old elements (both seasonal and budget mode)
+    card.querySelectorAll('.card-allowance, .card-spent, .card-income, .card-expense, .card-period-label').forEach(el => el.remove());
+    
+    // Add seasonal mode elements
+    const allowanceEl = document.createElement('div');
+    allowanceEl.className = 'card-allowance';
+    allowanceEl.textContent = allowance;
+    
+    const spentEl = document.createElement('div');
+    spentEl.className = 'card-spent';
+    spentEl.textContent = spent;
+    
+    if(labelEl && labelEl.nextSibling){
+      labelEl.parentNode.insertBefore(allowanceEl, labelEl.nextSibling);
+      labelEl.parentNode.insertBefore(spentEl, allowanceEl.nextSibling);
+    } else {
+      card.appendChild(allowanceEl);
+      card.appendChild(spentEl);
+    }
+  }
+
+  function updateDashboardCardBudgetMode(period, label, stats){
+    const card = document.querySelector(`.dashboard-card[data-period="${period}"]`);
+    if(!card) return;
+    const labelEl = card.querySelector('.card-label');
+    if(labelEl) labelEl.textContent = label;
+    
+    // Remove old elements
+    card.querySelectorAll('.card-allowance, .card-spent, .card-income, .card-expense, .card-period-label').forEach(el => el.remove());
+    
+    // Add new budget mode elements
+    const incomeEl = document.createElement('div');
+    incomeEl.className = 'card-income';
+    incomeEl.textContent = `+${formatCurrency(stats.income)}`;
+    
+    const expenseEl = document.createElement('div');
+    expenseEl.className = 'card-expense';
+    expenseEl.textContent = `-${formatCurrency(stats.expense)}`;
+    
+    if(labelEl && labelEl.nextSibling){
+      labelEl.parentNode.insertBefore(incomeEl, labelEl.nextSibling);
+      labelEl.parentNode.insertBefore(expenseEl, incomeEl.nextSibling);
+    } else {
+      card.appendChild(incomeEl);
+      card.appendChild(expenseEl);
+    }
   }
 
   function updateSeasonalStats(){
@@ -1919,26 +2075,36 @@
     }
 
     // Dashboard grid (D/W/M)
-    if(dashboardGridEl && window.SeasonalLogic){
-      const spent = window.SeasonalLogic.computeSpent(transactions, Date.now());
-      if(result.phase && result.phase.hasSeason && result.phase.isOffSeason){
-        if(dailyAllowanceEl) dailyAllowanceEl.textContent = formatCurrency(result.dailyAllowance || 0);
-        if(dailySpentEl) dailySpentEl.textContent = formatCurrency(spent.dailySpent || 0);
-        if(weeklyAllowanceEl) weeklyAllowanceEl.textContent = formatCurrency(result.weeklyAllowance || 0);
-        if(weeklySpentEl) weeklySpentEl.textContent = formatCurrency(spent.weeklySpent || 0);
-        if(monthlyAllowanceEl) monthlyAllowanceEl.textContent = formatCurrency(result.monthlyAllowance || 0);
-        if(monthlySpentEl) monthlySpentEl.textContent = formatCurrency(spent.monthlySpent || 0);
-        dashboardGridEl.hidden = false;
+    if(dashboardGridEl){
+      if(settings.seasonalMode && window.SeasonalLogic){
+        // Seasonal mode: show allowances and spent
+        const spent = window.SeasonalLogic.computeSpent(transactions, Date.now());
+        if(result.phase && result.phase.hasSeason && result.phase.isOffSeason){
+          updateDashboardCard('day', 'Daily', formatCurrency(result.dailyAllowance || 0), formatCurrency(spent.dailySpent || 0));
+          updateDashboardCard('week', 'Weekly', formatCurrency(result.weeklyAllowance || 0), formatCurrency(spent.weeklySpent || 0));
+          updateDashboardCard('month', 'Monthly', formatCurrency(result.monthlyAllowance || 0), formatCurrency(spent.monthlySpent || 0));
+          dashboardGridEl.hidden = false;
+        } else {
+          dashboardGridEl.hidden = true;
+        }
       } else {
-        dashboardGridEl.hidden = true;
+        // Budget mode: show Today/This Week/This Month income & expenses
+        const budget = computeBudgetStats(transactions, Date.now());
+        updateDashboardCardBudgetMode('day', 'Today', budget.today);
+        updateDashboardCardBudgetMode('week', 'This Week', budget.week);
+        updateDashboardCardBudgetMode('month', 'This Month', budget.month);
+        dashboardGridEl.hidden = false;
       }
     }
 
     if(seasonBadgeEl){
-      if(result.phase && result.phase.isOffSeason){
+      if(!settings.seasonalMode){
+        seasonBadgeEl.textContent = 'Budget mode';
+        seasonBadgeEl.hidden = false;
+      } else if(settings.seasonalMode && result.phase && result.phase.isOffSeason){
         seasonBadgeEl.textContent = 'Off-season';
         seasonBadgeEl.hidden = false;
-      } else if(result.phase && result.phase.isSeasonActive){
+      } else if(settings.seasonalMode && result.phase && result.phase.isSeasonActive){
         seasonBadgeEl.textContent = 'Season active';
         seasonBadgeEl.hidden = false;
       } else {
@@ -2008,7 +2174,7 @@
     });
   }
 
-  function saveEditedTransaction(amountCents,note,newTimestamp,name,category){
+  function saveEditedTransaction(amountCents,note,newTimestamp,name,category,recurringFreq){
     if(!editingTransaction || !sheetType) return Promise.resolve();
     const signed = sheetType==='expense'? -Math.abs(amountCents) : Math.abs(amountCents);
     const updated = { ...editingTransaction, amountCents:signed };
@@ -2029,6 +2195,11 @@
     }
     if(typeof newTimestamp === 'number' && Number.isFinite(newTimestamp)){
       updated.createdAt = newTimestamp;
+    }
+    if(recurringFreq){
+      updated.recurringFrequency = recurringFreq;
+    } else {
+      delete updated.recurringFrequency;
     }
     return dbAddTransaction(updated).then(()=>{
       const idx = transactions.findIndex(t=>t.id===updated.id);
@@ -2114,6 +2285,11 @@
       noteInput.focus();
     }
   });
+  if(recurringToggle && recurringFrequency){
+    recurringToggle.addEventListener('change',()=>{
+      recurringFrequency.hidden = !recurringToggle.checked;
+    });
+  }
   rawDigits.addEventListener('keydown',e=>{ if(e.key==='Backspace'){ e.preventDefault(); const v=rawDigits.value.replace(/\D/g,''); rawDigits.value = v.length<=1?'0':v.slice(0,-1); updateSheetAmount(); return; } if(/^\d$/.test(e.key)){ e.preventDefault(); const v=rawDigits.value==='0'? e.key : rawDigits.value+e.key; rawDigits.value=v; updateSheetAmount(); return; } if(e.key==='Enter'){ e.preventDefault(); } });
   rawDigits.addEventListener('input',updateSheetAmount);
   sheetAmountEl.addEventListener('click',()=>{ rawDigits.focus(); rawDigits.select && rawDigits.select(); });
@@ -2236,6 +2412,9 @@
     timelineCanvas.addEventListener('pointerdown', handleTimelinePointerDown);
     timelineCanvas.addEventListener('pointermove', handleTimelinePointerMove);
   }
+  if(timelinePopupListEl){
+    timelinePopupListEl.addEventListener('scroll', updateTimelineScrollArrows);
+  }
   window.addEventListener('pointerup', handleTimelinePointerUp);
   window.addEventListener('pointercancel', handleTimelinePointerUp);
   function handleConfirm(e){
@@ -2259,9 +2438,13 @@
       if(sheetMode==='edit' && editDateInput){
         overrideDate = parseLocalInputValue(editDateInput.value);
       }
+      let recurringFreq = null;
+      if(sheetMode==='edit' && recurringToggle && recurringToggle.checked && frequencySelect){
+        recurringFreq = frequencySelect.value;
+      }
       const isIncomeEntry = sheetType === 'income';
       const action = sheetMode==='edit'
-        ? saveEditedTransaction(cents, cleanedNote, overrideDate, nameValue, categoryValue)
+        ? saveEditedTransaction(cents, cleanedNote, overrideDate, nameValue, categoryValue, recurringFreq)
         : addTransaction(cents,cleanedNote,false,nameValue, null, categoryValue);
       action
         .then(()=>{
@@ -2286,6 +2469,14 @@
     themeToggleEl.addEventListener('change',()=>{
       settings.theme = themeToggleEl.checked ? 'light' : 'dark';
       dbSaveSettings(settings).then(()=> applyTheme(settings.theme));
+    });
+  }
+
+  if(seasonalModeToggle){
+    seasonalModeToggle.addEventListener('change',()=>{
+      settings.seasonalMode = seasonalModeToggle.checked;
+      if(seasonalSettingsEl) seasonalSettingsEl.classList.toggle('hidden', !settings.seasonalMode);
+      dbSaveSettings(settings).then(()=> updateSeasonalStats());
     });
   }
 
