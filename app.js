@@ -1,8 +1,3 @@
-  function syncTimelineCursorToggle(){
-    if(!timelineCursorToggle) return;
-    timelineCursorToggle.setAttribute('aria-pressed', timelineCursorEnabled ? 'true' : 'false');
-    timelineCursorToggle.classList.toggle('active', timelineCursorEnabled);
-  }
 /* FollowTheMoney vanilla JS */
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -83,7 +78,6 @@
   const timelinePopupEl = $('#timelineCursorPopup');
   const timelinePopupDateEl = $('#timelinePopupDate');
   const timelinePopupListEl = $('#timelinePopupList');
-  const timelineCursorToggle = $('#timelineCursorToggle');
   const btnGraphTimeline = $('#btnGraphTimeline');
   // breakdown total element removed — no reference needed
   const graphGroupInputs = Array.from(document.querySelectorAll('input[name="graphGroup"]'));
@@ -128,7 +122,6 @@
   let timelineChartMeta = null;
   let timelineCursorIndex = null;
   let timelineDragActive = false;
-  let timelineCursorEnabled = false;
 
   // IndexedDB setup
   const DB_NAME = 'followthemoney_plain';
@@ -216,8 +209,7 @@
     if(!timelineCanvasWrap || !timelineCursorEl || !timelinePopupEl) return;
     const labels = timelineSeriesData ? timelineSeriesData.labels : [];
     const count = labels ? labels.length : 0;
-    const showCursor = timelineCursorEnabled && graphMode === 'timeline';
-    if(!count || !timelineChartMeta || !showCursor){
+    if(!count || graphMode !== 'timeline' || !timelineChartMeta){
       hideTimelineCursorUI();
       return;
     }
@@ -303,7 +295,7 @@
   }
 
   function handleTimelinePointerDown(evt){
-    if(graphMode !== 'timeline' || !timelineCursorEnabled) return;
+    if(graphMode !== 'timeline') return;
     if(!timelineCanvas || !timelineSeriesData || !timelineSeriesData.labels.length) return;
     timelineDragActive = true;
     if(timelineCanvas.setPointerCapture) timelineCanvas.setPointerCapture(evt.pointerId);
@@ -311,7 +303,7 @@
   }
 
   function handleTimelinePointerMove(evt){
-    if(!timelineDragActive || !timelineCursorEnabled) return;
+    if(!timelineDragActive) return;
     updateTimelineCursorFromEvent(evt);
   }
 
@@ -2220,18 +2212,6 @@
     btnGraphTimeline.addEventListener('click',()=>{
       const nextMode = graphMode === 'timeline' ? 'classic' : 'timeline';
       setGraphMode(nextMode);
-    });
-  }
-  if(timelineCursorToggle){
-    syncTimelineCursorToggle();
-    timelineCursorToggle.addEventListener('click', ()=>{
-      timelineCursorEnabled = !timelineCursorEnabled;
-      syncTimelineCursorToggle();
-      if(!timelineCursorEnabled){
-        hideTimelineCursorUI();
-      } else {
-        refreshTimelineCursorUI();
-      }
     });
   }
   if(timelineCanvas){

@@ -534,19 +534,6 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
 .timeline-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
 .timeline-header h2 { margin:0; font-size:1.1rem; letter-spacing:-.1px; }
 .timeline-subtitle { margin:.2rem 0 0; font-size:.85rem; opacity:.7; }
-.timeline-tools { display:flex; align-items:center; gap:.5rem; margin-left:auto; }
-.timeline-toggle {
-  padding:.35rem .8rem;
-  font-size:.8rem;
-  border-radius:999px;
-  min-width:0;
-  line-height:1;
-}
-.timeline-toggle .toggle-icon { font-weight:700; opacity:.6; }
-.timeline-toggle[aria-pressed="true"] {
-  background:var(--accent);
-  color:#fff;
-}
 .timeline-legend { display:flex; gap:1rem; font-size:.85rem; font-weight:700; color:var(--graph-shell-muted); }
 .timeline-legend .dot { width:.65rem; height:.65rem; border-radius:50%; display:inline-block; margin-right:.35rem; }
 .timeline-legend .dot.income { background:var(--income); }
@@ -576,7 +563,6 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
   opacity:0;
   pointer-events:none;
   transition:opacity .15s ease;
-  z-index:2;
 }
 .timeline-canvas-wrap.showing-cursor .timeline-cursor {
   opacity:1;
@@ -597,7 +583,6 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
   pointer-events:none;
   transition:opacity .15s ease, transform .15s ease;
   color:var(--graph-shell-fg);
-  z-index:3;
 }
 .timeline-canvas-wrap.showing-cursor .timeline-popup {
   opacity:1;
