@@ -254,7 +254,8 @@
       timelinePopupListEl.appendChild(empty);
       return;
     }
-    entries.forEach(tx=>{
+    const limit = 8;
+    entries.slice(0, limit).forEach(tx=>{
       const li = document.createElement('li');
       li.className = tx.amountCents >= 0 ? 'income' : 'expense';
       const labelSpan = document.createElement('span');
@@ -265,6 +266,12 @@
       li.append(labelSpan, amountStrong);
       timelinePopupListEl.appendChild(li);
     });
+    if(entries.length > limit){
+      const more = document.createElement('li');
+      more.className = 'timeline-popup-empty';
+      more.textContent = `+${entries.length - limit} more`;
+      timelinePopupListEl.appendChild(more);
+    }
   }
 
   function updateTimelineCursorFromEvent(evt){
