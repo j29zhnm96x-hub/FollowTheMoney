@@ -1,3 +1,8 @@
+  function syncTimelineCursorToggle(){
+    if(!timelineCursorToggle) return;
+    timelineCursorToggle.setAttribute('aria-pressed', timelineCursorEnabled ? 'true' : 'false');
+    timelineCursorToggle.classList.toggle('active', timelineCursorEnabled);
+  }
 /* FollowTheMoney vanilla JS */
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -72,7 +77,13 @@
   const graphMainEl = $('#graphMain');
   const graphTimelineEl = $('#graphTimeline');
   const timelineCanvas = $('#timelineCanvas');
+  const timelineCanvasWrap = $('#timelineCanvasWrap');
   const timelineEmptyEl = $('#timelineEmpty');
+  const timelineCursorEl = $('#timelineCursor');
+  const timelinePopupEl = $('#timelineCursorPopup');
+  const timelinePopupDateEl = $('#timelinePopupDate');
+  const timelinePopupListEl = $('#timelinePopupList');
+  const timelineCursorToggle = $('#timelineCursorToggle');
   const btnGraphTimeline = $('#btnGraphTimeline');
   // breakdown total element removed — no reference needed
   const graphGroupInputs = Array.from(document.querySelectorAll('input[name="graphGroup"]'));
@@ -112,6 +123,12 @@
   let graphMode = 'classic'; // 'classic' | 'timeline'
   const graphColorCache = new Map();
   const graphPalette = ['#30d6a4','#ff4f6a','#6580ff','#f6c343','#58c7ff','#ff9fd5','#8be28b','#ffa25e','#ffd166','#b388ff'];
+  let timelineSeriesData = null;
+  let timelineEntriesByDay = new Map();
+  let timelineChartMeta = null;
+  let timelineCursorIndex = null;
+  let timelineDragActive = false;
+  let timelineCursorEnabled = false;
 
   // IndexedDB setup
   const DB_NAME = 'followthemoney_plain';
@@ -187,6 +204,124 @@
       syncSettingsUI();
       refreshGraphIfVisible();
     }
+  }
+
+  function hideTimelineCursorUI(){
+    if(timelineCanvasWrap) timelineCanvasWrap.classList.remove('showing-cursor');
+    if(timelineCursorEl) timelineCursorEl.hidden = true;
+    if(timelinePopupEl) timelinePopupEl.hidden = true;
+  }
+
+  function refreshTimelineCursorUI(){
+    if(!timelineCanvasWrap || !timelineCursorEl || !timelinePopupEl) return;
+    const labels = timelineSeriesData ? timelineSeriesData.labels : [];
+    const count = labels ? labels.length : 0;
+    const showCursor = timelineCursorEnabled && graphMode === 'timeline';
+    if(!count || !timelineChartMeta || !showCursor){
+      hideTimelineCursorUI();
+      return;
+    }
+    let idx = timelineCursorIndex;
+    if(typeof idx !== 'number' || idx < 0) idx = count - 1;
+    if(idx >= count) idx = count - 1;
+    if(idx < 0){
+      hideTimelineCursorUI();
+      return;
+    }
+    if(idx !== timelineCursorIndex) timelineCursorIndex = idx;
+    const label = labels[idx];
+    if(!label){
+      hideTimelineCursorUI();
+      return;
+    }
+    const { padding, step, dpr, cssWidth } = timelineChartMeta;
+    const totalSteps = Math.max(1, labels.length - 1);
+    const xDevice = padding.left + (totalSteps === 0 ? 0 : timelineCursorIndex * step);
+    const cssX = xDevice / dpr;
+    const wrapWidth = cssWidth || (timelineCanvas ? timelineCanvas.getBoundingClientRect().width : 0) || 1;
+    const percent = Math.max(0, Math.min(100, (cssX / wrapWidth) * 100));
+    timelineCanvasWrap.style.setProperty('--cursor-left', `${percent}%`);
+    timelineCanvasWrap.classList.add('showing-cursor');
+    timelineCursorEl.hidden = false;
+    timelinePopupEl.hidden = false;
+    if(timelinePopupDateEl) timelinePopupDateEl.textContent = formatDateTime(label.ts,false);
+    renderTimelinePopupList(label.ts);
+  }
+
+  function renderTimelinePopupList(ts){
+    if(!timelinePopupListEl) return;
+    timelinePopupListEl.innerHTML = '';
+    const entries = (timelineEntriesByDay && timelineEntriesByDay.get(ts)) || [];
+    if(!entries.length){
+      const empty = document.createElement('li');
+      empty.className = 'timeline-popup-empty';
+      empty.textContent = 'No transactions on this day';
+      timelinePopupListEl.appendChild(empty);
+      return;
+    }
+    const limit = 8;
+    entries.slice(0, limit).forEach(tx=>{
+      const li = document.createElement('li');
+      li.className = tx.amountCents >= 0 ? 'income' : 'expense';
+      const labelSpan = document.createElement('span');
+      const primary = (tx.name && tx.name.trim()) || (tx.category && tx.category.trim()) || 'Untitled';
+      labelSpan.textContent = primary;
+      const amountStrong = document.createElement('strong');
+      amountStrong.textContent = formatCurrency(tx.amountCents);
+      li.append(labelSpan, amountStrong);
+      timelinePopupListEl.appendChild(li);
+    });
+    if(entries.length > limit){
+      const more = document.createElement('li');
+      more.className = 'timeline-popup-empty';
+      more.textContent = `+${entries.length - limit} more`;
+      timelinePopupListEl.appendChild(more);
+    }
+  }
+
+  function updateTimelineCursorFromEvent(evt){
+    if(!timelineChartMeta || !timelineSeriesData || !timelineSeriesData.labels.length) return;
+    if(!timelineCanvas) return;
+    const rect = timelineCanvas.getBoundingClientRect();
+    const relative = rect.width ? (evt.clientX - rect.left) / rect.width : 0;
+    const deviceX = relative * timelineChartMeta.canvasWidth;
+    setTimelineCursorByDeviceX(deviceX);
+  }
+
+  function setTimelineCursorByDeviceX(deviceX){
+    if(!timelineChartMeta || !timelineSeriesData || !timelineSeriesData.labels.length) return;
+    const { padding, chartWidth } = timelineChartMeta;
+    const min = padding.left;
+    const max = padding.left + chartWidth;
+    const clamped = Math.min(Math.max(deviceX, min), max);
+    const labelsCount = timelineSeriesData.labels.length;
+    const progress = chartWidth === 0 ? 0 : (clamped - padding.left) / chartWidth;
+    const idx = Math.round(progress * Math.max(0, labelsCount - 1));
+    if(!Number.isFinite(idx)) return;
+    timelineCursorIndex = idx;
+    refreshTimelineCursorUI();
+  }
+
+  function handleTimelinePointerDown(evt){
+    if(graphMode !== 'timeline' || !timelineCursorEnabled) return;
+    if(!timelineCanvas || !timelineSeriesData || !timelineSeriesData.labels.length) return;
+    timelineDragActive = true;
+    if(timelineCanvas.setPointerCapture) timelineCanvas.setPointerCapture(evt.pointerId);
+    updateTimelineCursorFromEvent(evt);
+  }
+
+  function handleTimelinePointerMove(evt){
+    if(!timelineDragActive || !timelineCursorEnabled) return;
+    updateTimelineCursorFromEvent(evt);
+  }
+
+  function handleTimelinePointerUp(evt){
+    if(!timelineDragActive) return;
+    timelineDragActive = false;
+    if(evt && timelineCanvas && timelineCanvas.releasePointerCapture){
+      try { timelineCanvas.releasePointerCapture(evt.pointerId); } catch(_){}
+    }
+    refreshTimelineCursorUI();
   }
 
   function openDB(){
@@ -486,11 +621,13 @@
       if(Number.isNaN(date)) return;
       date.setHours(0,0,0,0);
       const key = date.getTime();
-      if(!dayMap.has(key)) dayMap.set(key,{ income:0, expense:0 });
+      if(!dayMap.has(key)) dayMap.set(key,{ income:0, expense:0, entries:[] });
+      const bucket = dayMap.get(key);
+      bucket.entries.push(tx);
       if(tx.amountCents >= 0){
-        dayMap.get(key).income += tx.amountCents;
+        bucket.income += tx.amountCents;
       } else {
-        dayMap.get(key).expense += Math.abs(tx.amountCents);
+        bucket.expense += Math.abs(tx.amountCents);
       }
     });
     const keys = Array.from(dayMap.keys()).sort((a,b)=>a-b);
@@ -498,15 +635,39 @@
     const labels = trimmed.map(ts=>({ ts, label: formatShortDate(ts) }));
     const income = trimmed.map(ts=> (dayMap.get(ts).income||0)/100);
     const expense = trimmed.map(ts=> (dayMap.get(ts).expense||0)/100);
-    return { labels, income, expense };
+    const entriesByDay = new Map();
+    trimmed.forEach(ts=>{
+      const bucket = dayMap.get(ts);
+      const sorted = (bucket && bucket.entries) ? bucket.entries.slice().sort((a,b)=>b.createdAt-a.createdAt) : [];
+      entriesByDay.set(ts, sorted);
+    });
+    return { labels, income, expense, entriesByDay };
   }
 
   function renderTimelineGraph(){
     if(graphMode !== 'timeline') return;
     if(!timelineCanvas) return;
-    const { labels, income, expense } = buildTimelineSeries();
+    const { labels, income, expense, entriesByDay } = buildTimelineSeries();
+    timelineSeriesData = { labels, income, expense };
+    timelineEntriesByDay = entriesByDay;
+    if(labels.length){
+      if(typeof timelineCursorIndex !== 'number' || timelineCursorIndex < 0){
+        timelineCursorIndex = labels.length - 1;
+      } else if(timelineCursorIndex >= labels.length){
+        timelineCursorIndex = labels.length - 1;
+      }
+    } else {
+      timelineCursorIndex = null;
+    }
     const hasData = labels.length >= 2 && (income.some(v=>v>0) || expense.some(v=>v>0));
-    if(timelineEmptyEl) timelineEmptyEl.hidden = hasData;
+    if(timelineEmptyEl){
+      timelineEmptyEl.hidden = hasData;
+      timelineEmptyEl.style.display = hasData ? 'none' : 'flex';
+    }
+    if(!hasData){
+      timelineChartMeta = null;
+      hideTimelineCursorUI();
+    }
     resizeTimelineCanvas();
     const ctx = timelineCanvas.getContext('2d');
     if(!ctx) return;
@@ -522,12 +683,25 @@
     const dpr = window.devicePixelRatio || 1;
     const width = timelineCanvas.width;
     const height = timelineCanvas.height;
+    const cssWidth = width / dpr;
+    const cssHeight = height / dpr;
     const padding = { top: 24*dpr, right: 48*dpr, bottom: 38*dpr, left: 62*dpr };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
     const maxValue = Math.max(1, ...income, ...expense);
     const yScale = chartHeight / maxValue;
     const step = labels.length > 1 ? chartWidth / (labels.length - 1) : chartWidth;
+    timelineChartMeta = {
+      padding,
+      chartWidth,
+      chartHeight,
+      step,
+      canvasWidth: width,
+      canvasHeight: height,
+      cssWidth,
+      cssHeight,
+      dpr
+    };
     ctx.lineWidth = 1*dpr;
     ctx.strokeStyle = gridColor;
     ctx.fillStyle = axisLabelColor;
@@ -582,6 +756,7 @@
     };
     drawLine(income, '#30d6a4');
     drawLine(expense, '#ff4f6a');
+    refreshTimelineCursorUI();
   }
 
   function setGraphMode(mode){
@@ -591,6 +766,9 @@
     if(graphMainEl) graphMainEl.hidden = graphMode === 'timeline';
     if(graphTimelineEl) graphTimelineEl.hidden = graphMode !== 'timeline';
     if(btnGraphTimeline) btnGraphTimeline.setAttribute('aria-pressed', graphMode === 'timeline' ? 'true' : 'false');
+    if(graphMode !== 'timeline'){
+      hideTimelineCursorUI();
+    }
     // wait for layout to settle before resizing canvases and rendering
     requestAnimationFrame(()=>{
       requestAnimationFrame(()=>{
@@ -2044,6 +2222,24 @@
       setGraphMode(nextMode);
     });
   }
+  if(timelineCursorToggle){
+    syncTimelineCursorToggle();
+    timelineCursorToggle.addEventListener('click', ()=>{
+      timelineCursorEnabled = !timelineCursorEnabled;
+      syncTimelineCursorToggle();
+      if(!timelineCursorEnabled){
+        hideTimelineCursorUI();
+      } else {
+        refreshTimelineCursorUI();
+      }
+    });
+  }
+  if(timelineCanvas){
+    timelineCanvas.addEventListener('pointerdown', handleTimelinePointerDown);
+    timelineCanvas.addEventListener('pointermove', handleTimelinePointerMove);
+  }
+  window.addEventListener('pointerup', handleTimelinePointerUp);
+  window.addEventListener('pointercancel', handleTimelinePointerUp);
   function handleConfirm(e){
     if(e) e.preventDefault();
     if(confirmBtn.disabled) return;

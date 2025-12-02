@@ -163,14 +163,25 @@
                 <h2>Timeline</h2>
                 <p class="timeline-subtitle">Income vs Expense over time</p>
               </div>
+              <div class="timeline-tools">
+                <button id="timelineCursorToggle" class="btn ghost timeline-toggle" type="button" aria-pressed="false" aria-label="Toggle timeline cursor">
+                  <span class="toggle-icon" aria-hidden="true">│</span>
+                  <span class="toggle-label">Cursor</span>
+                </button>
+              </div>
               <div class="timeline-legend">
                 <span><span class="dot income"></span> Income</span>
                 <span><span class="dot expense"></span> Expense</span>
               </div>
             </header>
-            <div class="timeline-canvas-wrap">
+            <div class="timeline-canvas-wrap" id="timelineCanvasWrap">
               <canvas id="timelineCanvas" width="720" height="360" aria-label="Timeline chart"></canvas>
               <div id="timelineEmpty" class="timeline-empty" hidden>Need at least two days of data to draw trends.</div>
+              <div id="timelineCursor" class="timeline-cursor" hidden aria-hidden="true"></div>
+              <div id="timelineCursorPopup" class="timeline-popup" hidden aria-live="polite">
+                <p id="timelinePopupDate" class="timeline-popup-date"></p>
+                <ul id="timelinePopupList" class="timeline-popup-list"></ul>
+              </div>
             </div>
           </div>
         </div>
