@@ -510,6 +510,11 @@
     resizeTimelineCanvas();
     const ctx = timelineCanvas.getContext('2d');
     if(!ctx) return;
+    const isLightTheme = document.documentElement.classList.contains('theme-light');
+    const gridColor = isLightTheme ? 'rgba(35,30,55,0.15)' : 'rgba(255,255,255,0.08)';
+    const axisLabelColor = isLightTheme ? 'rgba(32,24,48,0.7)' : 'rgba(255,255,255,0.7)';
+    const axisValueColor = isLightTheme ? 'rgba(32,24,48,0.65)' : 'rgba(255,255,255,0.65)';
+    const pointInnerColor = isLightTheme ? '#ffffff' : '#05020c';
     ctx.clearRect(0,0,timelineCanvas.width, timelineCanvas.height);
     if(!hasData){
       return;
@@ -517,15 +522,15 @@
     const dpr = window.devicePixelRatio || 1;
     const width = timelineCanvas.width;
     const height = timelineCanvas.height;
-    const padding = { top: 30*dpr, right: 60*dpr, bottom: 50*dpr, left: 80*dpr };
+    const padding = { top: 24*dpr, right: 48*dpr, bottom: 38*dpr, left: 62*dpr };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
     const maxValue = Math.max(1, ...income, ...expense);
     const yScale = chartHeight / maxValue;
     const step = labels.length > 1 ? chartWidth / (labels.length - 1) : chartWidth;
     ctx.lineWidth = 1*dpr;
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = gridColor;
+    ctx.fillStyle = axisLabelColor;
     ctx.font = `${12*dpr}px "Inter", system-ui, sans-serif`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -537,14 +542,14 @@
       ctx.moveTo(padding.left, y);
       ctx.lineTo(width - padding.right, y);
       ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.fillStyle = axisValueColor;
       ctx.fillText(value.toFixed(0), padding.left - 10*dpr, y);
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.strokeStyle = gridColor;
     }
     const xTicks = Math.min(6, labels.length);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillStyle = axisLabelColor;
     for(let i=0;i<xTicks;i++){
       const idx = Math.round((labels.length-1)/(xTicks-1 || 1) * i);
       const x = padding.left + idx * step;
@@ -567,7 +572,7 @@
         const y = height - padding.bottom - val * yScale;
         ctx.beginPath();
         ctx.arc(x,y,4*dpr,0,Math.PI*2);
-        ctx.fillStyle = '#05020c';
+        ctx.fillStyle = pointInnerColor;
         ctx.fill();
         ctx.beginPath();
         ctx.arc(x,y,3*dpr,0,Math.PI*2);
@@ -586,12 +591,19 @@
     if(graphMainEl) graphMainEl.hidden = graphMode === 'timeline';
     if(graphTimelineEl) graphTimelineEl.hidden = graphMode !== 'timeline';
     if(btnGraphTimeline) btnGraphTimeline.setAttribute('aria-pressed', graphMode === 'timeline' ? 'true' : 'false');
-    if(graphMode === 'timeline'){
-      renderTimelineGraph();
-    } else {
-      resizeGraphCanvas();
-      renderGraph();
-    }
+    // wait for layout to settle before resizing canvases and rendering
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        if(graphMode === 'timeline'){
+          // timeline uses its own resize helper
+          resizeTimelineCanvas();
+          renderTimelineGraph();
+        } else {
+          resizeGraphCanvas();
+          renderGraph();
+        }
+      });
+    });
   }
   function isLandscapeMode(){
     return window.innerWidth > window.innerHeight + 80;
@@ -608,13 +620,19 @@
     graphScreen.hidden = false;
     graphScreen.classList.add('active');
     currentScreen = 'graph';
-    resizeGraphCanvas();
+    // Defer rendering until graph screen is visible and layout has settled
     updateGraphTypeButtons();
-    if(graphMode === 'timeline'){
-      renderTimelineGraph();
-    } else {
-      renderGraph();
-    }
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        if(graphMode === 'timeline'){
+          resizeTimelineCanvas();
+          renderTimelineGraph();
+        } else {
+          resizeGraphCanvas();
+          renderGraph();
+        }
+      });
+    });
   }
   function hideGraphScreen(){
     if(!graphScreen || graphScreen.hidden) return;
@@ -2333,26 +2351,54 @@
   });
 
   window.addEventListener('resize', ()=>{
+    // immediate resize of internal canvases, then defer heavy redraw until layout stabilizes
     resizeGraphCanvas();
     resizeTimelineCanvas();
     syncGraphScreenVisibility();
-    if(graphScreen && !graphScreen.hidden){
-      if(graphMode === 'timeline') renderTimelineGraph();
-      else renderGraph();
-    }
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        if(graphScreen && !graphScreen.hidden){
+          if(graphMode === 'timeline') renderTimelineGraph();
+          else renderGraph();
+        }
+      });
+    });
   });
   window.addEventListener('orientationchange', ()=>{
     setTimeout(()=>{
       resizeGraphCanvas();
       resizeTimelineCanvas();
       syncGraphScreenVisibility();
-      if(graphScreen && !graphScreen.hidden){
-        if(graphMode === 'timeline') renderTimelineGraph();
-        else renderGraph();
-      }
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          if(graphScreen && !graphScreen.hidden){
+            if(graphMode === 'timeline') renderTimelineGraph();
+            else renderGraph();
+          }
+        });
+      });
     }, 150);
   });
   updateGraphTypeButtons();
   resizeGraphCanvas();
   syncGraphScreenVisibility();
+  // expose a small debug helper to compare computed styles between timeline and breakdown cards
+  window.ftmDebug = {
+    logCardStyles: function(){
+      try {
+        const timeline = document.querySelector('.graph-timeline-card');
+        const breakdown = document.querySelector('.graph-breakdown-card');
+        if(!timeline || !breakdown) { console.warn('Cards not present'); return; }
+        const props = ['display','height','min-height','max-height','flex','align-self','overflow'];
+        console.group('FTM card computed styles');
+        console.log('Timeline (.graph-timeline-card)');
+        const tcs = getComputedStyle(timeline);
+        props.forEach(p=> console.log(p+':', tcs.getPropertyValue(p)));
+        console.log('Breakdown (.graph-breakdown-card)');
+        const bcs = getComputedStyle(breakdown);
+        props.forEach(p=> console.log(p+':', bcs.getPropertyValue(p)));
+        console.groupEnd();
+      } catch(e){ console.error(e); }
+    }
+  };
 })();
