@@ -26,6 +26,9 @@
   const helpModal = $('#helpModal');
   const themeToggleEl = $('#themeToggle');
   const btnClearAll = $('#btnClearAll');
+  const btnAddIncome = $('#btnAddIncome');
+  const btnAddExpense = $('#btnAddExpense');
+  const floatButtonsWrap = document.querySelector('.float-buttons');
   // Seasonal Budget elements
   const seasonalModeToggle = $('#seasonalModeToggle');
   const seasonalSettingsEl = $('#seasonalSettings');
@@ -62,6 +65,7 @@
   const recurringFrequency = $('#recurringFrequency');
   const frequencySelect = $('#frequencySelect');
   const dateFormatEl = $('#dateFormat');
+  const singleButtonModeToggle = $('#singleButtonModeToggle');
   const currencySymbolInput = $('#currencySymbol');
   const btnExportShare = $('#btnExportShare');
   const btnExportEmail = $('#btnExportEmail');
@@ -115,6 +119,7 @@
     dateFormat: 'dmy',
     currencySymbol: '€',
     historyLocked: true,
+    singleButtonMode: false,
     incomeCategories: [],
     expenseCategories: [],
     incomeNames: [],
@@ -134,6 +139,9 @@
   let timelineCursorIndex = null;
   let timelineDragActive = false;
   let timelineCursorEnabled = false;
+  const SINGLE_BUTTON_HOLD_MS = 1000;
+  let singleButtonHoldTimer = null;
+  let singleButtonLongPressTriggered = false;
 
   // IndexedDB setup
   const DB_NAME = 'followthemoney_plain';
@@ -410,12 +418,14 @@
         recurringAmountCents:0, 
         lastRecurringAppliedMonth:null,
         theme: 'light',
+        seasonalMode: false,
         seasonStart: null,
         seasonEnd: null,
         seasonIncomeCents: 0,
         dateFormat: 'dmy',
         currencySymbol: '€',
         historyLocked: true,
+        singleButtonMode: false,
         incomeCategories: [],
         expenseCategories: [],
         incomeNames: [],
@@ -1910,12 +1920,23 @@
     // if theme is undefined/null -> fall back to system/default
   }
 
+  function applyButtonMode(){
+    const singleMode = !!settings.singleButtonMode;
+    if(floatButtonsWrap) floatButtonsWrap.classList.toggle('single-mode', singleMode);
+    if(btnAddIncome) btnAddIncome.hidden = singleMode;
+    if(btnAddExpense){
+      btnAddExpense.classList.toggle('single-button-active', singleMode);
+      if(!singleMode) resetSingleButtonVisual();
+    }
+  }
+
   function syncSettingsUI(){
     // theme toggle: checked = light theme
     if(themeToggleEl) themeToggleEl.checked = settings.theme === 'light';
     if(dateFormatEl) dateFormatEl.value = settings.dateFormat || 'dmy';
     if(currencySymbolInput) currencySymbolInput.value = settings.currencySymbol || '€';
     if(historyLockToggle) historyLockToggle.checked = !!settings.historyLocked;
+    if(singleButtonModeToggle) singleButtonModeToggle.checked = !!settings.singleButtonMode;
     if(seasonalModeToggle) seasonalModeToggle.checked = !!settings.seasonalMode;
     if(seasonalSettingsEl) seasonalSettingsEl.classList.toggle('hidden', !settings.seasonalMode);
     normalizeCollections();
@@ -1923,6 +1944,7 @@
     refreshNameOptions();
     renderFilterChips();
     applyTheme(settings.theme);
+    applyButtonMode();
 
     // seasonal fields
     if(seasonStartEl) seasonStartEl.value = settings.seasonStart || '';
@@ -2232,9 +2254,58 @@
     });
   }
 
+  function resetSingleButtonVisual(){
+    if(!btnAddExpense) return;
+    btnAddExpense.classList.add('expense');
+    btnAddExpense.classList.remove('income');
+    btnAddExpense.classList.remove('holding-income');
+  }
+
+  function handleSingleButtonPointerDown(evt){
+    if(!btnAddExpense || !settings.singleButtonMode) return;
+    evt.preventDefault();
+    singleButtonLongPressTriggered = false;
+    btnAddExpense.classList.add('holding-income');
+    if(singleButtonHoldTimer) clearTimeout(singleButtonHoldTimer);
+    singleButtonHoldTimer = setTimeout(()=>{
+      singleButtonHoldTimer = null;
+      singleButtonLongPressTriggered = true;
+      btnAddExpense.classList.remove('holding-income');
+      btnAddExpense.classList.remove('expense');
+      btnAddExpense.classList.add('income');
+      openSheet('income');
+    }, SINGLE_BUTTON_HOLD_MS);
+  }
+
+  function handleSingleButtonPointerEnd(triggerExpense){
+    if(!btnAddExpense || !settings.singleButtonMode) return;
+    btnAddExpense.classList.remove('holding-income');
+    if(singleButtonHoldTimer){
+      clearTimeout(singleButtonHoldTimer);
+      singleButtonHoldTimer = null;
+    }
+    if(triggerExpense && !singleButtonLongPressTriggered){
+      openSheet('expense');
+    }
+    resetSingleButtonVisual();
+    singleButtonLongPressTriggered = false;
+  }
+
   // Event bindings
-  $('#btnAddIncome').addEventListener('click',()=>openSheet('income'));
-  $('#btnAddExpense').addEventListener('click',()=>openSheet('expense'));
+  if(btnAddIncome) btnAddIncome.addEventListener('click',()=>openSheet('income'));
+  if(btnAddExpense){
+    btnAddExpense.addEventListener('click',e=>{
+      if(settings.singleButtonMode){
+        e.preventDefault();
+        return;
+      }
+      openSheet('expense');
+    });
+    btnAddExpense.addEventListener('pointerdown', handleSingleButtonPointerDown);
+    btnAddExpense.addEventListener('pointerup', ()=> handleSingleButtonPointerEnd(true));
+    btnAddExpense.addEventListener('pointerleave', ()=> handleSingleButtonPointerEnd(false));
+    btnAddExpense.addEventListener('pointercancel', ()=> handleSingleButtonPointerEnd(false));
+  }
   document.querySelectorAll('[data-dismiss]').forEach(el=> el.addEventListener('click',()=>{ if(el.closest('#sheet')) closeSheet(); if(el.closest('#settingsModal')) closeSettings(); if(el.closest('#helpModal')) closeHelp(); }));
   $('#btnSettings').addEventListener('click',openSettings);
   const btnHelpManual = $('#btnHelpManual');
@@ -2472,6 +2543,14 @@
     });
   }
 
+  if(singleButtonModeToggle){
+    singleButtonModeToggle.addEventListener('change',()=>{
+      settings.singleButtonMode = singleButtonModeToggle.checked;
+      applyButtonMode();
+      dbSaveSettings(settings);
+    });
+  }
+
   if(seasonalModeToggle){
     seasonalModeToggle.addEventListener('change',()=>{
       settings.seasonalMode = seasonalModeToggle.checked;
@@ -2607,12 +2686,14 @@
         recurringAmountCents:0,
         lastRecurringAppliedMonth:null,
         theme: 'light',
+        seasonalMode: false,
         seasonStart:null,
         seasonEnd:null,
         seasonIncomeCents:0,
         dateFormat:'dmy',
         currencySymbol:'€',
         historyLocked:true,
+        singleButtonMode:false,
         incomeCategories: [],
         expenseCategories: [],
         incomeNames: [],

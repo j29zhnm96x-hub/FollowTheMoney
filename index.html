@@ -48,7 +48,7 @@
         </div>
         <div id="recentList" class="recent-list" aria-label="Recent transactions"></div>
       </main>
-      <div class="float-buttons">
+      <div class="float-buttons" id="floatButtons">
         <button id="btnAddIncome" class="circle income" aria-label="Add income"></button>
         <button id="btnAddExpense" class="circle expense" aria-label="Add expense"></button>
       </div>
@@ -209,7 +209,7 @@
             <section class="settings-card" aria-labelledby="generalHeading">
               <div>
                 <h3 id="generalHeading">General</h3>
-                <p class="card-subtitle">Choose how dates appear across the app.</p>
+                <p class="card-subtitle">Choose how dates appear and how you add entries.</p>
               </div>
               <div class="setting-row">
                 <label for="dateFormat" class="small-label">Date format</label>
@@ -224,6 +224,15 @@
                 <label for="currencySymbol" class="small-label">Currency symbol</label>
                 <input id="currencySymbol" type="text" class="text-input" maxlength="3" placeholder="€" />
                 <div class="preview small">Shown after every amount (e.g. €, $, Kč).</div>
+              </div>
+              <div class="setting-row">
+                <label class="small-label" for="singleButtonModeToggle">Home input buttons</label>
+                <label class="toggle-row switch">
+                  <input type="checkbox" id="singleButtonModeToggle">
+                  <span class="switch-ui" aria-hidden="true"><span class="switch-thumb"></span></span>
+                  <span>Single button mode</span>
+                </label>
+                <div class="preview small">Tap for expense, press &amp; hold 1s for income.</div>
               </div>
             </section>
             <section class="settings-card" aria-labelledby="seasonHeading">
@@ -322,6 +331,7 @@
             <h3>Quick Start</h3>
             <ol>
               <li>Tap the <strong>green circle</strong> (Income) or <strong>red circle</strong> (Expense) on the Home screen.</li>
+              <li>Prefer a single control? Enable <em>Single button mode</em> in Settings → General. Tap once for an expense, or press &amp; hold for ~1 second—the button will fade from red to green as confirmation—then release to add income.</li>
               <li>Enter the amount using the numeric keypad (stored as cents with two decimals).</li>
               <li>Choose or type a <strong>Category</strong> (required) and <strong>Name</strong> (optional but recommended).</li>
               <li>Optionally tap "Add note" to include additional context.</li>
@@ -333,6 +343,7 @@
             <h3>Home Screen</h3>
             <p><strong>Balance:</strong> Shows your current total (income minus expenses).</p>
             <p><strong>Badge:</strong> Displays "Budget mode" by default, or "Off-season"/"Season active" when Seasonal Budget Mode is enabled.</p>
+            <p><strong>Input Buttons:</strong> The default layout shows two circles (green for income, red for expense). If you enable Single button mode, only the red button remains—tap for expense, or press and hold until it morphs to green to submit an income entry.</p>
             <p><strong>Dashboard Cards:</strong></p>
             <ul>
               <li><strong>Budget Mode (default):</strong> Cards show <em>Today</em>, <em>This Week</em>, and <em>This Month</em> with income (green) and expenses (red) totals.</li>
@@ -392,6 +403,7 @@
               <li><strong>Theme Toggle:</strong> Switch between Light and Dark themes (top-right).</li>
               <li><strong>Date Format:</strong> Choose Day/Month/Year, Month/Day/Year, or Year/Month/Day.</li>
               <li><strong>Currency Symbol:</strong> Customize the symbol displayed after amounts (€, $, etc.).</li>
+              <li><strong>Home Input Buttons:</strong> Swap between two-circle layout (default) and Single button mode (tap for expense, hold for 1s to add income).</li>
             </ul>
 
             <h4>Seasonal Budget</h4>
