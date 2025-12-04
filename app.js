@@ -1535,6 +1535,23 @@
     }, 150);
   }
 
+  function scrollHistoryCardIntoView(card){
+    if(!card) return;
+    const container = historyScreen;
+    if(!container){
+      card.scrollIntoView({ behavior:'smooth', block:'center' });
+      return;
+    }
+    const parentRect = container.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const currentScroll = container.scrollTop || 0;
+    const relativeTop = (cardRect.top - parentRect.top) + currentScroll;
+    const targetCenter = relativeTop - (container.clientHeight/2) + (cardRect.height/2);
+    const maxScroll = Math.max(container.scrollHeight - container.clientHeight, 0);
+    const clamped = Math.min(Math.max(targetCenter, 0), maxScroll);
+    container.scrollTo({ top: clamped, behavior: 'smooth' });
+  }
+
   function renderHistory(){
     if(!historyList) return;
     clearHistoryCardOverlay();
@@ -1683,7 +1700,7 @@
           }
           return;
         }
-        highlightEl.scrollIntoView({ behavior:'smooth', block:'center' });
+        scrollHistoryCardIntoView(highlightEl);
         setTimeout(()=>{
           setHistoryCardOverlay(highlightEl);
         }, 220);
