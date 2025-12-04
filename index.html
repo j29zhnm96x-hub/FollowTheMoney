@@ -139,6 +139,10 @@
           <div class="graph-breakdown-card">
             <div class="graph-breakdown-header">
               <h2>Breakdown</h2>
+              <span class="timeline-scroll-indicators legend-scroll-indicators" aria-hidden="true" id="graphLegendScrollIndicators">
+                <span class="timeline-scroll-arrow up" id="graphLegendScrollArrowUp"></span>
+                <span class="timeline-scroll-arrow down" id="graphLegendScrollArrowDown"></span>
+              </span>
             </div>
             <div class="graph-legend" id="graphLegend" aria-live="polite"></div>
           </div>
@@ -205,6 +209,9 @@
           </label>
         </div>
         <div class="settings-body">
+          <div class="settings-help-btn-row" style="margin-bottom:.6rem;">
+            <button id="btnHelpManual" class="btn ghost">Help &amp; Manual</button>
+          </div>
           <div class="settings-grid">
             <section class="settings-card" aria-labelledby="generalHeading">
               <div>
@@ -283,10 +290,7 @@
                 <button id="btnExportShare" class="btn accent full">Share backup</button>
                 <div class="preview small">Uses the OS share sheet when available.</div>
               </div>
-              <div class="setting-row">
-                <button id="btnExportEmail" class="btn ghost full">Email backup</button>
-                <div class="preview small">Copies the backup and opens your mail app.</div>
-              </div>
+              <!-- Email backup option removed -->
               <div class="setting-row">
                 <button id="btnImportData" class="btn ghost full">Import backup</button>
                 <div class="preview small">Select a saved .json backup file to restore.</div>
@@ -305,7 +309,6 @@
             </section>
           </div>
           <div class="settings-actions">
-            <button id="btnHelpManual" class="btn accent full" type="button">Help &amp; Manual</button>
             <button class="btn ghost full" data-dismiss>Close</button>
           </div>
         </div>
@@ -423,7 +426,7 @@
             <h4>Data Export & Import</h4>
             <ul>
               <li><strong>Share backup:</strong> Creates a JSON file you can share via your device's share sheet.</li>
-              <li><strong>Email backup:</strong> Copies JSON to clipboard and opens your mail app.</li>
+              <!-- Email backup help entry removed -->
               <li><strong>Import backup:</strong> Restore data from a JSON backup file. <em>Warning:</em> This replaces all current data—export first!</li>
               <li>Automatic local backups are saved in browser storage as a safety net.</li>
             </ul>
@@ -533,6 +536,7 @@
       <div class="sheet-panel" aria-label="Amount entry" role="dialog">
         <div class="sheet-grabber"></div>
         <div id="sheetAmount" class="amount-display">0.00 €</div>
+        <div id="sheetTypeLabel" class="sheet-type-label" aria-hidden="true"></div>
         <input id="rawDigits" type="tel" inputmode="numeric" class="hidden-input" />
         <div id="categoryContainer" class="category-container" hidden>
           <label for="categoryInput" class="small-label">Category</label>

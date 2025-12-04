@@ -68,13 +68,15 @@
   const singleButtonModeToggle = $('#singleButtonModeToggle');
   const currencySymbolInput = $('#currencySymbol');
   const btnExportShare = $('#btnExportShare');
-  const btnExportEmail = $('#btnExportEmail');
   const btnImportData = $('#btnImportData');
   const importFileInput = $('#importFile');
   const historyLockToggle = $('#historyLockToggle');
   const graphScreen = $('#screen-graph');
   const graphTypeFiltersEl = $('#graphTypeFilters');
   const graphLegendEl = $('#graphLegend');
+  const graphLegendScrollArrowUp = $('#graphLegendScrollArrowUp');
+  const graphLegendScrollArrowDown = $('#graphLegendScrollArrowDown');
+  const graphLegendScrollIndicators = $('#graphLegendScrollIndicators');
   const graphCanvas = $('#graphCanvas');
   const graphEmptyEl = $('#graphEmpty');
   const graphTotalValueEl = $('#graphTotalValue');
@@ -126,6 +128,11 @@
     expenseNames: []
   };
   let pendingHistoryHighlightId = null;
+  const historyOverlayDismissEvents = ['pointerdown','mousedown','touchstart','keydown','wheel'];
+  let activeHistoryOverlayEl = null;
+  let historyOverlayDismissHandler = null;
+  let historyFocusCoverEl = null;
+  let historyOverlayAttachTimer = null;
   let graphType = 'expense';
   let graphGrouping = 'category';
   let previousNonGraphScreen = 'home';
@@ -289,6 +296,28 @@
       timelineScrollArrowDown.classList.add('visible');
     } else {
       timelineScrollArrowDown.classList.remove('visible');
+    }
+  }
+
+  function updateGraphLegendScrollIndicators(){
+    if(!graphLegendEl || !graphLegendScrollArrowUp || !graphLegendScrollArrowDown || !graphLegendScrollIndicators) return;
+    const { scrollTop, scrollHeight, clientHeight } = graphLegendEl;
+    const canScroll = scrollHeight - clientHeight > 1;
+    graphLegendScrollIndicators.classList.toggle('active', canScroll);
+    if(!canScroll){
+      graphLegendScrollArrowUp.classList.remove('visible');
+      graphLegendScrollArrowDown.classList.remove('visible');
+      return;
+    }
+    if(scrollTop > 1){
+      graphLegendScrollArrowUp.classList.add('visible');
+    } else {
+      graphLegendScrollArrowUp.classList.remove('visible');
+    }
+    if(scrollHeight - clientHeight - scrollTop > 1){
+      graphLegendScrollArrowDown.classList.add('visible');
+    } else {
+      graphLegendScrollArrowDown.classList.remove('visible');
     }
   }
 
@@ -565,6 +594,7 @@
     const segments = buildGraphSegments();
     const total = segments.reduce((sum,item)=> sum + item.value, 0);
     graphLegendEl.innerHTML = '';
+    updateGraphLegendScrollIndicators();
     if(graphTotalValueEl){
       graphTotalValueEl.textContent = total>0 ? formatCurrency(total) : formatCurrency(0);
     }
@@ -636,6 +666,7 @@
       legendItem.appendChild(pct);
       graphLegendEl.appendChild(legendItem);
     });
+    updateGraphLegendScrollIndicators();
     ctx.beginPath();
     ctx.arc(centerX, centerY, innerRadius, 0, Math.PI*2);
     const bodyStyles = window.getComputedStyle(document.body);
@@ -1172,25 +1203,7 @@
       btnExportShare.disabled = false;
     }
   }
-  async function handleExportEmail(){
-    if(!btnExportEmail) return;
-    btnExportEmail.disabled = true;
-    try{
-      const payload = buildBackupPayload();
-      if(typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText){
-        try{ await navigator.clipboard.writeText(payload); }catch(_){ /* clipboard may be denied */ }
-      }
-      const previewLimit = 1800;
-      const snippet = payload.length>previewLimit ? `${payload.slice(0,previewLimit)}\n… (truncated)` : payload;
-      const body = `Backup data (full JSON copied to clipboard):\n\n${snippet}`;
-      window.location.href = `mailto:?subject=${encodeURIComponent('FollowTheMoney Backup')}&body=${encodeURIComponent(body)}`;
-    }catch(err){
-      console.error('Export/email error', err);
-      alert('Unable to prepare email backup. Please try again.');
-    }finally{
-      btnExportEmail.disabled = false;
-    }
-  }
+  // Email backup removed
   function parseBackupText(text){
     const parsed = JSON.parse(text);
     if(!parsed || typeof parsed !== 'object') throw new Error('Invalid backup format.');
@@ -1383,6 +1396,17 @@
     setTimeout(triggerNavigation, 220);
   }
 
+  function scrollHistoryCardIntoViewIfNeeded(el){
+    if(!el || !historyScreen) return;
+    const container = historyScreen;
+    const rect = el.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const fullyVisible = rect.top >= containerRect.top && rect.bottom <= containerRect.bottom;
+    if(fullyVisible) return;
+    const offset = rect.top - containerRect.top - ((containerRect.height - rect.height) / 2);
+    container.scrollBy({ top: offset, behavior: 'smooth' });
+  }
+
   function updateBalance(){
     const total = transactions.reduce((a,t)=>a+t.amountCents,0);
     balanceEl.textContent = formatCurrency(total);
@@ -1467,8 +1491,53 @@
     };
   }
 
+  function clearHistoryCardOverlay(){
+    if(historyOverlayAttachTimer){
+      clearTimeout(historyOverlayAttachTimer);
+      historyOverlayAttachTimer = null;
+    }
+    if(historyOverlayDismissHandler){
+      historyOverlayDismissEvents.forEach(evt=> document.removeEventListener(evt, historyOverlayDismissHandler));
+      historyOverlayDismissHandler = null;
+    }
+    if(historyFocusCoverEl){
+      historyFocusCoverEl.classList.remove('visible');
+      if(historyFocusCoverEl.parentNode){
+        historyFocusCoverEl.parentNode.removeChild(historyFocusCoverEl);
+      }
+    }
+    if(activeHistoryOverlayEl){
+      activeHistoryOverlayEl.classList.remove('focus-overlay');
+      activeHistoryOverlayEl = null;
+    }
+  }
+
+  function setHistoryCardOverlay(el){
+    if(!el) return;
+    clearHistoryCardOverlay();
+    activeHistoryOverlayEl = el;
+    el.classList.add('focus-overlay');
+
+    if(!historyFocusCoverEl){
+      historyFocusCoverEl = document.createElement('div');
+      historyFocusCoverEl.className = 'history-focus-cover';
+    }
+    historyFocusCoverEl.classList.remove('visible');
+    el.appendChild(historyFocusCoverEl);
+    requestAnimationFrame(()=> historyFocusCoverEl.classList.add('visible'));
+
+    historyOverlayDismissHandler = ()=>{
+      clearHistoryCardOverlay();
+    };
+
+    historyOverlayAttachTimer = setTimeout(()=>{
+      historyOverlayDismissEvents.forEach(evt=> document.addEventListener(evt, historyOverlayDismissHandler));
+    }, 150);
+  }
+
   function renderHistory(){
     if(!historyList) return;
+    clearHistoryCardOverlay();
     historyList.innerHTML = '';
     let filteredTxs = transactions;
     if(historyFilter && window.SeasonalLogic){
@@ -1602,17 +1671,24 @@
     });
 
     if(pendingHistoryHighlightId){
-      const highlightEl = historyList.querySelector(`.transaction[data-id="${pendingHistoryHighlightId}"]`);
-      if(highlightEl){
-        const removeAfterAnimation = e=>{
-          if(e && e.animationName !== 'historyFlash') return;
-          highlightEl.removeEventListener('animationend', removeAfterAnimation);
-          highlightEl.classList.remove('flash-highlight');
-        };
-        highlightEl.addEventListener('animationend', removeAfterAnimation);
-        highlightEl.classList.add('flash-highlight');
+      const targetId = pendingHistoryHighlightId;
+      let attempt = 0;
+      const maxAttempts = 8;
+      const locateAndFocus = ()=>{
+        const highlightEl = historyList.querySelector(`.transaction[data-id="${targetId}"]`);
+        if(!highlightEl){
+          if(attempt < maxAttempts){
+            attempt += 1;
+            setTimeout(locateAndFocus, 80);
+          }
+          return;
+        }
         highlightEl.scrollIntoView({ behavior:'smooth', block:'center' });
-      }
+        setTimeout(()=>{
+          setHistoryCardOverlay(highlightEl);
+        }, 220);
+      };
+      setTimeout(locateAndFocus, 60);
       pendingHistoryHighlightId = null;
     }
   }
@@ -1863,6 +1939,13 @@
       }
     }
     confirmBtn.textContent = sheetMode==='edit' ? 'Save Changes' : (type==='expense'?'Add Expense':'Add Income');
+    // update visible type label below amount
+    const sheetTypeLabel = document.getElementById('sheetTypeLabel');
+    if(sheetTypeLabel){
+      sheetTypeLabel.textContent = type === 'expense' ? 'Expense' : 'Income';
+      sheetTypeLabel.classList.remove('expense','income');
+      sheetTypeLabel.classList.add(type === 'expense' ? 'expense' : 'income');
+    }
     setTimeout(()=>rawDigits.focus(),100);
   }
   function closeSheet(){ 
@@ -2486,6 +2569,9 @@
   if(timelinePopupListEl){
     timelinePopupListEl.addEventListener('scroll', updateTimelineScrollArrows);
   }
+  if(graphLegendEl){
+    graphLegendEl.addEventListener('scroll', updateGraphLegendScrollIndicators);
+  }
   window.addEventListener('pointerup', handleTimelinePointerUp);
   window.addEventListener('pointercancel', handleTimelinePointerUp);
   function handleConfirm(e){
@@ -2605,9 +2691,6 @@
   }
   if(btnExportShare){
     btnExportShare.addEventListener('click',()=> handleExportShare());
-  }
-  if(btnExportEmail){
-    btnExportEmail.addEventListener('click',()=> handleExportEmail());
   }
   if(btnImportData && importFileInput){
     btnImportData.addEventListener('click',()=>{
