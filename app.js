@@ -583,44 +583,36 @@
   function buildGraphSegments(typeOverride){
     const currentType = typeOverride || graphType;
     const filterPositive = currentType === 'income';
-    const key = graphGrouping === 'name' ? 'name' : 'category';
-      const fallback = graphGrouping === 'name' ? 'Unnamed' : 'Uncategorized'; // Updated fallback value
     const map = new Map();
     transactions.forEach(t=>{
-      if(filterPositive && t.amountCents < 0) return;
-      if(!filterPositive && t.amountCents >= 0) return;
-      const labelRaw = (t[key] && t[key].trim()) || fallback;
+      const isIncome = t.amountCents >= 0;
+      if(filterPositive && !isIncome) return;
+      if(!filterPositive && isIncome) return;
       const amount = Math.abs(t.amountCents);
-      if(amount<=0) return;
-      if(!map.has(labelRaw)){
-        map.set(labelRaw, {
-          value: 0,
-          categoryWeight: graphGrouping === 'name' ? new Map() : null
-        });
-      }
-      const bucket = map.get(labelRaw);
-      bucket.value += amount;
+      if(amount <= 0) return;
+
+      let label = '';
+      let categoryLabel = null;
       if(graphGrouping === 'name'){
+        const nameRaw = (t.name && t.name.trim()) || 'Unnamed';
         const categoryRaw = (t.category && t.category.trim()) || 'Uncategorized';
-        const weightMap = bucket.categoryWeight;
-        weightMap.set(categoryRaw, (weightMap.get(categoryRaw)||0) + amount);
+        label = `${categoryRaw} / ${nameRaw}`;
+        categoryLabel = categoryRaw;
+      } else {
+        label = (t.category && t.category.trim()) || 'Uncategorized';
+      }
+
+      if(!map.has(label)){
+        map.set(label, { value: 0, categoryLabel });
+      }
+      const bucket = map.get(label);
+      bucket.value += amount;
+      if(graphGrouping === 'name' && !bucket.categoryLabel){
+        bucket.categoryLabel = categoryLabel;
       }
     });
     return Array.from(map.entries())
-      .map(([label,bucket])=>{
-        let categoryLabel = null;
-        if(graphGrouping === 'name' && bucket.categoryWeight){
-          let max = -Infinity;
-          bucket.categoryWeight.forEach((val,cat)=>{
-            if(val > max){
-              max = val;
-              categoryLabel = cat;
-            }
-          });
-          if(!categoryLabel) categoryLabel = 'Uncategorized';
-        }
-        return { label, value: bucket.value, categoryLabel };
-      })
+      .map(([label,bucket])=> ({ label, value: bucket.value, categoryLabel: bucket.categoryLabel }))
       .sort((a,b)=> b.value - a.value);
   }
   function resizeGraphCanvas(){
@@ -682,12 +674,7 @@
       dot.style.background = color;
       const text = document.createElement('span');
       text.className = 'legend-label';
-      if(graphGrouping === 'name'){
-        const categoryName = segment.categoryLabel || 'Uncategorized';
-        text.textContent = `${categoryName} / ${segment.label}`;
-      } else {
-        text.textContent = segment.label;
-      }
+      text.textContent = segment.label;
       const amount = document.createElement('span');
       amount.className = 'legend-amount';
       amount.textContent = formatCurrency(segment.value);
@@ -1079,34 +1066,70 @@
       });
     });
   }
-  function getGraphExclusionList(typeKey, groupKey){
+  const normalizeLegendLabel = label => (label || '').trim().toLowerCase();
+  function isLegendLabelExcluded(label){
     ensureGraphExclusions();
-    const type = typeKey === 'income' ? 'income' : 'expense';
-    const group = groupKey === 'name' ? 'name' : 'category';
-    return settings.graphExclusions[type][group];
-  }
-  function isLegendLabelExcluded(label, typeKey, groupKey){
-    if(!label) return false;
-    const normalized = label.trim().toLowerCase();
-    const bucket = getGraphExclusionList(typeKey || graphType, groupKey || graphGrouping);
-    return bucket.includes(normalized);
-  }
-  function updateLegendExclusion(label, shouldExclude, typeKey, groupKey){
-    if(!label) return Promise.resolve();
-    const normalized = label.trim().toLowerCase();
-    if(!normalized) return Promise.resolve();
-    const bucket = getGraphExclusionList(typeKey || graphType, groupKey || graphGrouping);
-    const idx = bucket.indexOf(normalized);
-    if(shouldExclude && idx === -1){
-      bucket.push(normalized);
-    } else if(!shouldExclude && idx !== -1){
-      bucket.splice(idx,1);
-    } else {
-      return Promise.resolve();
+    const type = graphType === 'income' ? 'income' : 'expense';
+    const group = graphGrouping === 'name' ? 'name' : 'category';
+    const normalized = normalizeLegendLabel(label);
+    const list = settings.graphExclusions[type][group] || [];
+    if(list.includes(normalized)) return true;
+    if(group === 'name'){
+      const parts = (label || '').split('/');
+      const nameOnly = normalizeLegendLabel(parts[parts.length - 1] || '');
+      if(nameOnly && list.includes(nameOnly)) return true;
     }
+    return false;
+  }
+  function updateLegendExclusion(label, exclude){
+    ensureGraphExclusions();
+    const type = graphType === 'income' ? 'income' : 'expense';
+    const group = graphGrouping === 'name' ? 'name' : 'category';
+    const list = settings.graphExclusions[type][group];
+    const normalized = normalizeLegendLabel(label);
+    const parts = (label || '').split('/');
+    const nameOnly = group === 'name' ? normalizeLegendLabel(parts[parts.length - 1] || '') : null;
+    let changed = false;
+    const add = val => { if(val && !list.includes(val)){ list.push(val); changed = true; } };
+    const remove = val => {
+      if(!val) return;
+      const idx = list.indexOf(val);
+      if(idx !== -1){ list.splice(idx,1); changed = true; }
+    };
+    if(exclude){
+      add(normalized);
+      if(nameOnly && nameOnly !== normalized) add(nameOnly);
+    } else {
+      remove(normalized);
+      if(nameOnly && nameOnly !== normalized) remove(nameOnly);
+    }
+    if(!changed) return Promise.resolve();
     return dbSaveSettings(settings).then(()=>{
-      refreshGraphIfVisible();
+      scheduleLocalBackup('graph-exclusion-toggle');
+      renderGraph();
     });
+  }
+  function getGraphExclusionList(typeKey, groupKey){
+    const grouping = groupKey === 'name' ? 'name' : 'category';
+    const type = typeKey === 'income' ? 'income' : 'expense';
+    const filterPositive = type === 'income';
+    const map = new Map();
+    transactions.forEach(t=>{
+      const isIncome = t.amountCents >= 0;
+      if(filterPositive && !isIncome) return;
+      if(!filterPositive && isIncome) return;
+      const amount = Math.abs(t.amountCents);
+      if(amount <= 0) return;
+      const categoryRaw = (t.category && t.category.trim()) || 'Uncategorized';
+      const nameRaw = (t.name && t.name.trim()) || 'Unnamed';
+      const label = grouping === 'name' ? `${categoryRaw} / ${nameRaw}` : categoryRaw;
+      const bucket = map.get(label) || { value: 0, categoryLabel: grouping === 'name' ? categoryRaw : null };
+      bucket.value += amount;
+      map.set(label, bucket);
+    });
+    return Array.from(map.entries())
+      .map(([label,bucket])=> ({ label, value: bucket.value, categoryLabel: bucket.categoryLabel }))
+      .sort((a,b)=> b.value - a.value);
   }
   function clearLegendHoldState(){
     if(legendHoldTimer){
@@ -1119,7 +1142,6 @@
     }
   }
   function handleLegendHoldPointerDown(evt){
-    if(evt.pointerType === 'mouse' && evt.button !== 0) return;
     const item = evt.currentTarget;
     clearLegendHoldState();
     hideLegendPopup();

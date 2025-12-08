@@ -785,10 +785,19 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
 .graph-legend-item.excluded {
   outline:1px solid rgba(255,255,255,0.65);
   outline-offset:-2px;
-  opacity:.65;
+  opacity:1; /* keep popup fully opaque even when parent is excluded */
 }
 html.theme-light .graph-legend-item.excluded {
   outline-color:rgba(35,30,55,0.4);
+}
+.graph-legend-item.excluded .legend-label,
+.graph-legend-item.excluded .legend-amount,
+.graph-legend-item.excluded .legend-excluded-tag {
+  opacity:.7;
+}
+.graph-legend-item.excluded .graph-legend-color {
+  filter:grayscale(.4);
+  opacity:.8;
 }
 .graph-legend-item .legend-excluded-tag {
   font-size:.78rem;
