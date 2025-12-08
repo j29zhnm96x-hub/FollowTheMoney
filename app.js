@@ -125,7 +125,11 @@
     incomeCategories: [],
     expenseCategories: [],
     incomeNames: [],
-    expenseNames: []
+    expenseNames: [],
+    graphExclusions: {
+      income: { category: [], name: [] },
+      expense: { category: [], name: [] }
+    }
   };
   let pendingHistoryHighlightId = null;
   const historyOverlayDismissEvents = ['pointerdown','mousedown','touchstart','keydown','wheel'];
@@ -149,6 +153,10 @@
   const SINGLE_BUTTON_HOLD_MS = 1000;
   let singleButtonHoldTimer = null;
   let singleButtonLongPressTriggered = false;
+  const LEGEND_HOLD_DURATION = 3000;
+  let legendHoldTimer = null;
+  let legendHoldTarget = null;
+  let legendPopupEl = null;
 
   // IndexedDB setup
   const DB_NAME = 'followthemoney_plain';
@@ -458,7 +466,11 @@
         incomeCategories: [],
         expenseCategories: [],
         incomeNames: [],
-        expenseNames: []
+        expenseNames: [],
+        graphExclusions: {
+          income: { category: [], name: [] },
+          expense: { category: [], name: [] }
+        }
       });
       req.onerror = ()=> reject(req.error);
     });
@@ -580,8 +592,16 @@
     });
   }
 
-  function setGraphEmptyState(isEmpty){
+  function setGraphEmptyState(isEmpty, message){
     if(!graphEmptyEl) return;
+    if(!graphEmptyEl.dataset.defaultMessage){
+      graphEmptyEl.dataset.defaultMessage = graphEmptyEl.textContent || '';
+    }
+    if(isEmpty && message){
+      graphEmptyEl.textContent = message;
+    } else if(!isEmpty && graphEmptyEl.dataset.defaultMessage){
+      graphEmptyEl.textContent = graphEmptyEl.dataset.defaultMessage;
+    }
     graphEmptyEl.hidden = !isEmpty;
     graphEmptyEl.style.display = isEmpty ? 'flex' : 'none';
     graphEmptyEl.setAttribute('aria-hidden', isEmpty ? 'false' : 'true');
@@ -592,33 +612,84 @@
     const ctx = graphCanvas.getContext('2d');
     if(!ctx) return;
     const segments = buildGraphSegments();
-    const total = segments.reduce((sum,item)=> sum + item.value, 0);
+    const activeSegments = segments.filter(segment=> !isLegendLabelExcluded(segment.label));
+    const total = activeSegments.reduce((sum,item)=> sum + item.value, 0);
+    const hasSegments = segments.length > 0;
+    const groupingLabel = graphGrouping === 'name' ? 'by names' : 'by categories';
+    clearLegendHoldState();
+    hideLegendPopup();
     graphLegendEl.innerHTML = '';
+    segments.forEach(segment=>{
+      const color = getGraphColor(segment.label);
+      const legendItem = document.createElement('div');
+      legendItem.className = 'graph-legend-item';
+      legendItem.dataset.label = segment.label;
+      legendItem.dataset.graphType = graphType;
+      legendItem.dataset.graphGrouping = graphGrouping;
+      const dot = document.createElement('span');
+      dot.className = 'graph-legend-color';
+      dot.style.background = color;
+      const text = document.createElement('span');
+      text.className = 'legend-label';
+      text.textContent = segment.label;
+      const amount = document.createElement('span');
+      amount.className = 'legend-amount';
+      amount.textContent = formatCurrency(segment.value);
+      const textWrap = document.createElement('div');
+      textWrap.className = 'legend-text';
+      textWrap.appendChild(text);
+      textWrap.appendChild(amount);
+      const pct = document.createElement('strong');
+      const excluded = isLegendLabelExcluded(segment.label);
+      if(excluded){
+        legendItem.classList.add('excluded');
+        pct.textContent = 'Excluded';
+        pct.classList.add('legend-excluded-tag');
+      } else {
+        const percent = total>0 ? Math.round((segment.value/total)*1000)/10 : 0;
+        pct.textContent = `${percent}%`;
+      }
+      legendItem.appendChild(dot);
+      legendItem.appendChild(textWrap);
+      legendItem.appendChild(pct);
+      legendItem.addEventListener('pointerdown', handleLegendHoldPointerDown);
+      legendItem.addEventListener('pointerup', handleLegendHoldPointerCancel);
+      legendItem.addEventListener('pointerleave', handleLegendHoldPointerCancel);
+      legendItem.addEventListener('pointercancel', handleLegendHoldPointerCancel);
+      graphLegendEl.appendChild(legendItem);
+    });
     updateGraphLegendScrollIndicators();
     if(graphTotalValueEl){
-      graphTotalValueEl.textContent = total>0 ? formatCurrency(total) : formatCurrency(0);
+      graphTotalValueEl.textContent = formatCurrency(total);
     }
-    // breakdown total label removed — totals remain shown in the chart overlay
     if(graphTotalScopeEl){
-      const groupingLabel = graphGrouping === 'name' ? 'by names' : 'by categories';
-      graphTotalScopeEl.textContent = total>0
-        ? `${graphType==='income'?'Income':'Expense'} · ${groupingLabel}`
-        : 'No data yet';
+      if(total>0){
+        graphTotalScopeEl.textContent = `${graphType==='income'?'Income':'Expense'} · ${groupingLabel}`;
+      } else if(hasSegments){
+        graphTotalScopeEl.textContent = `All ${graphGrouping === 'name' ? 'names' : 'categories'} excluded`;
+      } else {
+        graphTotalScopeEl.textContent = 'No data yet';
+      }
     }
     if(total<=0){
-      if(transactions.length){
-        const alternateType = graphType === 'income' ? 'expense' : 'income';
-        const alternateSegments = buildGraphSegments(alternateType);
-        const alternateTotal = alternateSegments.reduce((sum,item)=> sum + item.value, 0);
-        if(alternateTotal > 0){
-          graphType = alternateType;
-          updateGraphTypeButtons();
-          renderGraph();
-          return;
+      if(!hasSegments){
+        if(transactions.length){
+          const alternateType = graphType === 'income' ? 'expense' : 'income';
+          const alternateSegments = buildGraphSegments(alternateType);
+          const alternateTotal = alternateSegments.reduce((sum,item)=> sum + item.value, 0);
+          if(alternateTotal > 0){
+            graphType = alternateType;
+            updateGraphTypeButtons();
+            renderGraph();
+            return;
+          }
         }
+        graphCanvas.style.visibility = 'hidden';
+        setGraphEmptyState(true);
+      } else {
+        graphCanvas.style.visibility = 'hidden';
+        setGraphEmptyState(true, 'All items are excluded. Long-press a card to include it again.');
       }
-      graphCanvas.style.visibility = 'hidden';
-      setGraphEmptyState(true);
       return;
     }
     graphCanvas.style.visibility = 'visible';
@@ -630,7 +701,7 @@
     const radius = Math.min(centerX, centerY) - 12*(window.devicePixelRatio||1);
     const innerRadius = radius * 0.55;
     let startAngle = -Math.PI/2;
-    segments.forEach(segment=>{
+    activeSegments.forEach(segment=>{
       const sliceAngle = (segment.value/total) * Math.PI * 2;
       const endAngle = startAngle + sliceAngle;
       const color = getGraphColor(segment.label);
@@ -643,30 +714,7 @@
       ctx.fill();
       startAngle = endAngle;
 
-      const legendItem = document.createElement('div');
-      legendItem.className = 'graph-legend-item';
-      const dot = document.createElement('span');
-      dot.className = 'graph-legend-color';
-      dot.style.background = color;
-      const percent = Math.round((segment.value/total)*1000)/10;
-      const text = document.createElement('span');
-      text.className = 'legend-label';
-      text.textContent = segment.label;
-      const amount = document.createElement('span');
-      amount.className = 'legend-amount';
-      amount.textContent = formatCurrency(segment.value);
-      const textWrap = document.createElement('div');
-      textWrap.className = 'legend-text';
-      textWrap.appendChild(text);
-      textWrap.appendChild(amount);
-      const pct = document.createElement('strong');
-      pct.textContent = `${percent}%`;
-      legendItem.appendChild(dot);
-      legendItem.appendChild(textWrap);
-      legendItem.appendChild(pct);
-      graphLegendEl.appendChild(legendItem);
     });
-    updateGraphLegendScrollIndicators();
     ctx.beginPath();
     ctx.arc(centerX, centerY, innerRadius, 0, Math.PI*2);
     const bodyStyles = window.getComputedStyle(document.body);
@@ -938,6 +986,119 @@
     ['incomeCategories','expenseCategories','incomeNames','expenseNames'].forEach(key=>{
       if(!Array.isArray(settings[key])) settings[key] = [];
     });
+    ensureGraphExclusions();
+  }
+  function ensureGraphExclusions(){
+    if(!settings.graphExclusions) settings.graphExclusions = {
+      income: { category: [], name: [] },
+      expense: { category: [], name: [] }
+    };
+    ['income','expense'].forEach(type=>{
+      if(!settings.graphExclusions[type]){
+        settings.graphExclusions[type] = { category: [], name: [] };
+      }
+      ['category','name'].forEach(group=>{
+        if(!Array.isArray(settings.graphExclusions[type][group])){
+          settings.graphExclusions[type][group] = [];
+        }
+        const normalized = settings.graphExclusions[type][group]
+          .map(val => typeof val === 'string' ? val.trim().toLowerCase() : '')
+          .filter(Boolean);
+        settings.graphExclusions[type][group] = Array.from(new Set(normalized));
+      });
+    });
+  }
+  function getGraphExclusionList(typeKey, groupKey){
+    ensureGraphExclusions();
+    const type = typeKey === 'income' ? 'income' : 'expense';
+    const group = groupKey === 'name' ? 'name' : 'category';
+    return settings.graphExclusions[type][group];
+  }
+  function isLegendLabelExcluded(label, typeKey, groupKey){
+    if(!label) return false;
+    const normalized = label.trim().toLowerCase();
+    const bucket = getGraphExclusionList(typeKey || graphType, groupKey || graphGrouping);
+    return bucket.includes(normalized);
+  }
+  function updateLegendExclusion(label, shouldExclude, typeKey, groupKey){
+    if(!label) return Promise.resolve();
+    const normalized = label.trim().toLowerCase();
+    if(!normalized) return Promise.resolve();
+    const bucket = getGraphExclusionList(typeKey || graphType, groupKey || graphGrouping);
+    const idx = bucket.indexOf(normalized);
+    if(shouldExclude && idx === -1){
+      bucket.push(normalized);
+    } else if(!shouldExclude && idx !== -1){
+      bucket.splice(idx,1);
+    } else {
+      return Promise.resolve();
+    }
+    return dbSaveSettings(settings).then(()=>{
+      refreshGraphIfVisible();
+    });
+  }
+  function clearLegendHoldState(){
+    if(legendHoldTimer){
+      clearTimeout(legendHoldTimer);
+      legendHoldTimer = null;
+    }
+    if(legendHoldTarget){
+      legendHoldTarget.classList.remove('hold-arming');
+      legendHoldTarget = null;
+    }
+  }
+  function handleLegendHoldPointerDown(evt){
+    if(evt.pointerType === 'mouse' && evt.button !== 0) return;
+    const item = evt.currentTarget;
+    clearLegendHoldState();
+    hideLegendPopup();
+    legendHoldTarget = item;
+    item.classList.add('hold-arming');
+    legendHoldTimer = setTimeout(()=>{
+      legendHoldTimer = null;
+      showLegendPopup(item);
+    }, LEGEND_HOLD_DURATION);
+  }
+  function handleLegendHoldPointerCancel(){
+    clearLegendHoldState();
+  }
+  function showLegendPopup(item){
+    clearLegendHoldState();
+    if(!item) return;
+    hideLegendPopup();
+    const label = item.dataset.label || 'This item';
+    const excluded = item.classList.contains('excluded');
+    const popup = document.createElement('div');
+    popup.className = 'legend-hold-popup';
+    const title = document.createElement('p');
+    title.textContent = excluded ? `${label} is excluded` : `Exclude ${label}?`;
+    const actionBtn = document.createElement('button');
+    actionBtn.type = 'button';
+    actionBtn.textContent = excluded ? 'Include in graph' : 'Exclude from graph';
+    actionBtn.addEventListener('click', ()=>{
+      updateLegendExclusion(label, !excluded).finally(()=> hideLegendPopup());
+    });
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', hideLegendPopup);
+    popup.append(title, actionBtn, cancelBtn);
+    popup.addEventListener('pointerdown', evt=> evt.stopPropagation());
+    item.appendChild(popup);
+    legendPopupEl = popup;
+  }
+  function hideLegendPopup(){
+    if(legendPopupEl){
+      const parent = legendPopupEl.parentElement;
+      if(parent) parent.classList.remove('hold-arming');
+      legendPopupEl.remove();
+      legendPopupEl = null;
+    }
+  }
+  function handleGlobalLegendPointerDown(evt){
+    if(!legendPopupEl) return;
+    if(legendPopupEl.contains(evt.target)) return;
+    hideLegendPopup();
   }
   function collectionKey(type, kind){
     const isExpense = type === 'expense';
@@ -1144,7 +1305,11 @@
       incomeCategories: [],
       expenseCategories: [],
       incomeNames: [],
-      expenseNames: []
+      expenseNames: [],
+      graphExclusions: {
+        income: { category: [], name: [] },
+        expense: { category: [], name: [] }
+      }
     };
     const next = { ...base, ...settings, ...(raw || {}) };
     const allowedFormats = new Set(['dmy','mdy','ymd']);
@@ -1155,6 +1320,27 @@
     next.historyLocked = !!next.historyLocked;
     ['incomeCategories','expenseCategories','incomeNames','expenseNames'].forEach(key=>{
       if(!Array.isArray(next[key])) next[key] = [];
+    });
+    if(!next.graphExclusions){
+      next.graphExclusions = {
+        income: { category: [], name: [] },
+        expense: { category: [], name: [] }
+      };
+    }
+    ['income','expense'].forEach(type=>{
+      if(!next.graphExclusions[type]){
+        next.graphExclusions[type] = { category: [], name: [] };
+      }
+      ['category','name'].forEach(group=>{
+        if(!Array.isArray(next.graphExclusions[type][group])){
+          next.graphExclusions[type][group] = [];
+        }
+        next.graphExclusions[type][group] = Array.from(new Set(
+          next.graphExclusions[type][group]
+            .map(val => typeof val === 'string' ? val.trim().toLowerCase() : '')
+            .filter(Boolean)
+        ));
+      });
     });
     return next;
   }
@@ -2797,7 +2983,11 @@
         incomeCategories: [],
         expenseCategories: [],
         incomeNames: [],
-        expenseNames: []
+        expenseNames: [],
+        graphExclusions: {
+          income: { category: [], name: [] },
+          expense: { category: [], name: [] }
+        }
       };
       dbSaveSettings(settings).then(()=>{
         updateBalance();
@@ -2822,6 +3012,7 @@
       if(summaryScreen && !summaryScreen.hidden) closeSummaryScreen();
     }
   });
+  document.addEventListener('pointerdown', handleGlobalLegendPointerDown);
 
   const warmBackup = readLocalBackup();
   if(warmBackup){

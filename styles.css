@@ -774,12 +774,73 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
   border:1px solid var(--graph-panel-border);
   font-weight:600;
   color:var(--graph-shell-fg);
+  position:relative;
+  transition:background .2s ease, border-color .2s ease, opacity .2s ease;
 }
 .graph-legend-item strong { font-weight:700; font-variant-numeric:tabular-nums; }
 .graph-legend-item .legend-text { flex:1; display:flex; align-items:baseline; gap:.35rem; }
 .graph-legend-item .legend-label { font-size:.95rem; font-weight:700; }
 .graph-legend-item .legend-amount { font-size:.85rem; opacity:.75; font-variant-numeric:tabular-nums; }
 .graph-legend-color { width:.65rem; height:.65rem; border-radius:50%; flex-shrink:0; margin-top:.25rem; }
+.graph-legend-item.excluded {
+  outline:1px solid rgba(255,255,255,0.65);
+  outline-offset:-2px;
+  opacity:.65;
+}
+html.theme-light .graph-legend-item.excluded {
+  outline-color:rgba(35,30,55,0.4);
+}
+.graph-legend-item .legend-excluded-tag {
+  font-size:.78rem;
+  font-weight:700;
+  color:var(--expense);
+}
+.graph-legend-item.hold-arming {
+  border-color:var(--accent);
+  background:rgba(101,128,255,0.08);
+}
+.legend-hold-popup {
+  position:absolute;
+  top:100%;
+  right:0;
+  margin-top:.4rem;
+  background:var(--graph-panel-bg);
+  border:1px solid var(--graph-panel-border);
+  border-radius:14px;
+  padding:.6rem .75rem;
+  box-shadow:0 12px 28px rgba(0,0,0,0.35);
+  display:flex;
+  flex-direction:column;
+  gap:.35rem;
+  min-width:200px;
+  z-index:5;
+}
+.legend-hold-popup p {
+  margin:0;
+  font-size:.85rem;
+  font-weight:600;
+}
+.legend-hold-popup button {
+  border:none;
+  border-radius:12px;
+  padding:.45rem .8rem;
+  font-size:.85rem;
+  font-weight:700;
+  cursor:pointer;
+  background:rgba(255,255,255,0.08);
+  color:var(--graph-shell-fg);
+  transition:background .2s ease;
+}
+.legend-hold-popup button:hover {
+  background:rgba(255,255,255,0.14);
+}
+html.theme-light .legend-hold-popup button {
+  background:rgba(0,0,0,0.07);
+  color:var(--graph-shell-fg);
+}
+html.theme-light .legend-hold-popup button:hover {
+  background:rgba(0,0,0,0.12);
+}
 .graph-empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; font-size:.9rem; font-weight:600; opacity:.7; padding:1rem; color:var(--graph-shell-muted); }
 .group-summary {
   margin:0 auto 1rem;
