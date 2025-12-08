@@ -157,6 +157,8 @@
   let legendHoldTimer = null;
   let legendHoldTarget = null;
   let legendPopupEl = null;
+  let legendFlashLabel = null;
+  let legendFlashTimer = null;
 
   // IndexedDB setup
   const DB_NAME = 'followthemoney_plain';
@@ -549,18 +551,40 @@
         return `${day}/${month}/${yearShort}`;
     }
   }
+  function getGraphColorIndex(label){
+    const hash = Array.from(label).reduce((acc,char)=> acc + char.charCodeAt(0),0);
+    return hash % graphPalette.length;
+  }
   function getGraphColor(label){
     if(graphColorCache.has(label)) return graphColorCache.get(label);
-    const hash = Array.from(label).reduce((acc,char)=> acc + char.charCodeAt(0),0);
-    const color = graphPalette[hash % graphPalette.length];
+    const color = graphPalette[getGraphColorIndex(label)];
     graphColorCache.set(label,color);
     return color;
+  }
+  function assignSegmentColors(segments){
+    const colorMap = new Map();
+    let lastColor = null;
+    segments.forEach(segment=>{
+      const baseIdx = getGraphColorIndex(segment.label);
+      let chosen = null;
+      for(let i=0;i<graphPalette.length;i++){
+        const color = graphPalette[(baseIdx + i) % graphPalette.length];
+        if(color !== lastColor){
+          chosen = color;
+          break;
+        }
+      }
+      if(!chosen) chosen = graphPalette[baseIdx];
+      colorMap.set(segment.label, chosen);
+      lastColor = chosen;
+    });
+    return colorMap;
   }
   function buildGraphSegments(typeOverride){
     const currentType = typeOverride || graphType;
     const filterPositive = currentType === 'income';
     const key = graphGrouping === 'name' ? 'name' : 'category';
-    const fallback = graphGrouping === 'name' ? 'Unnamed' : 'Uncategorized';
+      const fallback = graphGrouping === 'name' ? 'Unnamed' : 'Uncategorized'; // Updated fallback value
     const map = new Map();
     transactions.forEach(t=>{
       if(filterPositive && t.amountCents < 0) return;
@@ -568,10 +592,35 @@
       const labelRaw = (t[key] && t[key].trim()) || fallback;
       const amount = Math.abs(t.amountCents);
       if(amount<=0) return;
-      map.set(labelRaw, (map.get(labelRaw)||0) + amount);
+      if(!map.has(labelRaw)){
+        map.set(labelRaw, {
+          value: 0,
+          categoryWeight: graphGrouping === 'name' ? new Map() : null
+        });
+      }
+      const bucket = map.get(labelRaw);
+      bucket.value += amount;
+      if(graphGrouping === 'name'){
+        const categoryRaw = (t.category && t.category.trim()) || 'Uncategorized';
+        const weightMap = bucket.categoryWeight;
+        weightMap.set(categoryRaw, (weightMap.get(categoryRaw)||0) + amount);
+      }
     });
     return Array.from(map.entries())
-      .map(([label,value])=>({ label, value }))
+      .map(([label,bucket])=>{
+        let categoryLabel = null;
+        if(graphGrouping === 'name' && bucket.categoryWeight){
+          let max = -Infinity;
+          bucket.categoryWeight.forEach((val,cat)=>{
+            if(val > max){
+              max = val;
+              categoryLabel = cat;
+            }
+          });
+          if(!categoryLabel) categoryLabel = 'Uncategorized';
+        }
+        return { label, value: bucket.value, categoryLabel };
+      })
       .sort((a,b)=> b.value - a.value);
   }
   function resizeGraphCanvas(){
@@ -613,6 +662,7 @@
     if(!ctx) return;
     const segments = buildGraphSegments();
     const activeSegments = segments.filter(segment=> !isLegendLabelExcluded(segment.label));
+    const colorMap = assignSegmentColors(activeSegments.length ? activeSegments : segments);
     const total = activeSegments.reduce((sum,item)=> sum + item.value, 0);
     const hasSegments = segments.length > 0;
     const groupingLabel = graphGrouping === 'name' ? 'by names' : 'by categories';
@@ -620,10 +670,11 @@
     hideLegendPopup();
     graphLegendEl.innerHTML = '';
     segments.forEach(segment=>{
-      const color = getGraphColor(segment.label);
+      const color = colorMap.get(segment.label) || getGraphColor(segment.label);
       const legendItem = document.createElement('div');
       legendItem.className = 'graph-legend-item';
       legendItem.dataset.label = segment.label;
+      if(segment.categoryLabel) legendItem.dataset.category = segment.categoryLabel;
       legendItem.dataset.graphType = graphType;
       legendItem.dataset.graphGrouping = graphGrouping;
       const dot = document.createElement('span');
@@ -631,7 +682,12 @@
       dot.style.background = color;
       const text = document.createElement('span');
       text.className = 'legend-label';
-      text.textContent = segment.label;
+      if(graphGrouping === 'name'){
+        const categoryName = segment.categoryLabel || 'Uncategorized';
+        text.textContent = `${categoryName} / ${segment.label}`;
+      } else {
+        text.textContent = segment.label;
+      }
       const amount = document.createElement('span');
       amount.className = 'legend-amount';
       amount.textContent = formatCurrency(segment.value);
@@ -656,6 +712,7 @@
       legendItem.addEventListener('pointerup', handleLegendHoldPointerCancel);
       legendItem.addEventListener('pointerleave', handleLegendHoldPointerCancel);
       legendItem.addEventListener('pointercancel', handleLegendHoldPointerCancel);
+      legendItem.addEventListener('click', handleLegendClickFlash);
       graphLegendEl.appendChild(legendItem);
     });
     updateGraphLegendScrollIndicators();
@@ -704,7 +761,7 @@
     activeSegments.forEach(segment=>{
       const sliceAngle = (segment.value/total) * Math.PI * 2;
       const endAngle = startAngle + sliceAngle;
-      const color = getGraphColor(segment.label);
+      const color = colorMap.get(segment.label) || getGraphColor(segment.label);
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.arc(centerX, centerY, radius, startAngle, endAngle);
@@ -712,6 +769,20 @@
       ctx.closePath();
       ctx.fillStyle = color;
       ctx.fill();
+      if(legendFlashLabel && legendFlashLabel === segment.label){
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.lineWidth = 6*(window.devicePixelRatio||1);
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius + 6*(window.devicePixelRatio||1), startAngle, endAngle);
+        ctx.stroke();
+        ctx.restore();
+      }
       startAngle = endAngle;
 
     });
@@ -1099,6 +1170,24 @@
     if(!legendPopupEl) return;
     if(legendPopupEl.contains(evt.target)) return;
     hideLegendPopup();
+  }
+  function triggerLegendFlash(label){
+    if(!label) return;
+    legendFlashLabel = label;
+    if(legendFlashTimer) clearTimeout(legendFlashTimer);
+    legendFlashTimer = setTimeout(()=>{
+      legendFlashLabel = null;
+      legendFlashTimer = null;
+      renderGraph();
+    }, 450);
+    renderGraph();
+  }
+  function handleLegendClickFlash(evt){
+    const item = evt.currentTarget;
+    if(item.classList.contains('excluded')) return;
+    const label = item.dataset.label;
+    if(!label) return;
+    triggerLegendFlash(label);
   }
   function collectionKey(type, kind){
     const isExpense = type === 'expense';
