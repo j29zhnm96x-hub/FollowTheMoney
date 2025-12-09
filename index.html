@@ -122,6 +122,29 @@
             <button class="graph-type-pill" data-graph-type="income">Income</button>
             <button class="graph-type-pill" data-graph-type="expense">Expense</button>
           </div>
+          <div class="graph-range-control">
+            <button id="graphRangeBtn" class="graph-range-btn" type="button" aria-haspopup="true" aria-expanded="false">Time range: All time</button>
+            <div id="graphRangeMenu" class="graph-range-menu" hidden role="menu">
+              <div class="graph-range-list">
+                <button type="button" data-range="this_week">This week</button>
+                <button type="button" data-range="last_week">Last week</button>
+                <button type="button" data-range="this_month">This month</button>
+                <button type="button" data-range="last_month">Last month</button>
+                <button type="button" id="graphRangeClear" class="graph-range-clear">All time</button>
+              </div>
+              <div class="graph-range-custom">
+                <div class="range-row">
+                  <label for="graphRangeStart">Start</label>
+                  <input id="graphRangeStart" type="date" />
+                </div>
+                <div class="range-row">
+                  <label for="graphRangeEnd">End</label>
+                  <input id="graphRangeEnd" type="date" />
+                </div>
+                <button id="graphRangeApply" type="button" class="graph-range-apply">Apply custom</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="graph-view-toggle" role="radiogroup" aria-label="Group by">
           <label>

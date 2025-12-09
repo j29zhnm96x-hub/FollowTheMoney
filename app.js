@@ -94,6 +94,12 @@
   const timelineScrollArrowUp = $('#timelineScrollArrowUp');
   const timelineScrollArrowDown = $('#timelineScrollArrowDown');
   const btnGraphTimeline = $('#btnGraphTimeline');
+  const graphRangeBtn = $('#graphRangeBtn');
+  const graphRangeMenu = $('#graphRangeMenu');
+  const graphRangeApplyBtn = $('#graphRangeApply');
+  const graphRangeClearBtn = $('#graphRangeClear');
+  const graphRangeStartInput = $('#graphRangeStart');
+  const graphRangeEndInput = $('#graphRangeEnd');
   const btnTimelineCursorToggle = $('#btnTimelineCursorToggle');
   // breakdown total element removed — no reference needed
   const graphGroupInputs = Array.from(document.querySelectorAll('input[name="graphGroup"]'));
@@ -142,6 +148,7 @@
   let previousNonGraphScreen = 'home';
   let currentScreen = 'home';
   let graphMode = 'classic'; // 'classic' | 'timeline'
+  let graphDateRange = { type:'all', start:null, end:null };
   const graphColorCache = new Map();
   const graphPalette = ['#30d6a4','#ff4f6a','#6580ff','#f6c343','#58c7ff','#ff9fd5','#8be28b','#ffa25e','#ffd166','#b388ff'];
   let timelineSeriesData = null;
@@ -508,6 +515,8 @@
     const symbol = (settings && settings.currencySymbol) ? settings.currencySymbol : '€';
     return formatted + '\u202F' + symbol;
   };
+  const startOfDayTs = ts => { const d = new Date(ts); d.setHours(0,0,0,0); return d.getTime(); };
+  const endOfDayTs = ts => { const d = new Date(ts); d.setHours(23,59,59,999); return d.getTime(); };
   const equalsIgnoreCase = (a,b)=>{
     if(a==null || b==null) return false;
     return String(a).toLowerCase() === String(b).toLowerCase();
@@ -580,11 +589,80 @@
     });
     return colorMap;
   }
-  function buildGraphSegments(typeOverride){
+  function computeGraphPresetRange(type){
+    const now = new Date();
+    const todayStart = startOfDayTs(now.getTime());
+    const todayEnd = endOfDayTs(now.getTime());
+    const dayOfWeek = (now.getDay() + 6) % 7; // 0 = Monday
+    const thisWeekStart = startOfDayTs(todayStart - dayOfWeek * 86400000);
+    const thisWeekEnd = endOfDayTs(now.getTime());
+    const lastWeekStart = startOfDayTs(thisWeekStart - 7 * 86400000);
+    const lastWeekEnd = endOfDayTs(lastWeekStart + 6 * 86400000);
+    const thisMonthStart = startOfDayTs(new Date(now.getFullYear(), now.getMonth(), 1).getTime());
+    const thisMonthEnd = endOfDayTs(now.getTime());
+    const lastMonthStart = startOfDayTs(new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime());
+    const lastMonthEnd = endOfDayTs(new Date(now.getFullYear(), now.getMonth(), 0).getTime());
+    switch(type){
+      case 'this_week':
+        return { type:'preset', key:'this_week', label:'This week', start:thisWeekStart, end:thisWeekEnd };
+      case 'last_week':
+        return { type:'preset', key:'last_week', label:'Last week', start:lastWeekStart, end:lastWeekEnd };
+      case 'this_month':
+        return { type:'preset', key:'this_month', label:'This month', start:thisMonthStart, end:thisMonthEnd };
+      case 'last_month':
+        return { type:'preset', key:'last_month', label:'Last month', start:lastMonthStart, end:lastMonthEnd };
+      default:
+        return { type:'all', start:null, end:null, label:'All time' };
+    }
+  }
+  function formatGraphRangeLabel(range){
+    if(!range || range.type === 'all') return 'All time';
+    if(range.type === 'preset' && range.label) return range.label;
+    if(range.type === 'custom' && range.start && range.end){
+      return `Custom: ${formatShortDate(range.start)} - ${formatShortDate(range.end)}`;
+    }
+    return 'All time';
+  }
+  function filterTransactionsByGraphRange(list){
+    if(!graphDateRange || graphDateRange.type === 'all') return list;
+    const { start, end } = graphDateRange;
+    if(!start || !end) return list;
+    return list.filter(t=> t && typeof t.createdAt === 'number' && t.createdAt >= start && t.createdAt <= end);
+  }
+  function updateGraphRangeLabel(){
+    if(!graphRangeBtn) return;
+    const label = formatGraphRangeLabel(graphDateRange);
+    graphRangeBtn.textContent = `Time range: ${label}`;
+    graphRangeBtn.setAttribute('aria-expanded', graphRangeMenu && !graphRangeMenu.hidden ? 'true' : 'false');
+  }
+  function hideGraphRangeMenu(){
+    if(graphRangeMenu && !graphRangeMenu.hidden){
+      graphRangeMenu.hidden = true;
+      graphRangeMenu.style.display = 'none';
+      if(graphRangeBtn){ graphRangeBtn.setAttribute('aria-expanded','false'); }
+      updateGraphRangeLabel();
+    }
+  }
+  function showGraphRangeMenu(){
+    if(graphRangeMenu){
+      graphRangeMenu.hidden = false;
+      graphRangeMenu.style.display = 'block';
+      if(graphRangeBtn){ graphRangeBtn.setAttribute('aria-expanded','true'); }
+      updateGraphRangeLabel();
+    }
+  }
+  function setGraphDateRange(next){
+    graphDateRange = next || { type:'all', start:null, end:null };
+    updateGraphRangeLabel();
+    hideGraphRangeMenu();
+    refreshGraphIfVisible();
+  }
+  function buildGraphSegments(typeOverride, txList){
     const currentType = typeOverride || graphType;
     const filterPositive = currentType === 'income';
+    const source = Array.isArray(txList) ? txList : filterTransactionsByGraphRange(transactions);
     const map = new Map();
-    transactions.forEach(t=>{
+    source.forEach(t=>{
       const isIncome = t.amountCents >= 0;
       if(filterPositive && !isIncome) return;
       if(!filterPositive && isIncome) return;
@@ -652,12 +730,14 @@
     if(!graphCanvas || !graphLegendEl) return;
     const ctx = graphCanvas.getContext('2d');
     if(!ctx) return;
-    const segments = buildGraphSegments();
+    const filteredTxs = filterTransactionsByGraphRange(transactions);
+    const segments = buildGraphSegments(undefined, filteredTxs);
     const activeSegments = segments.filter(segment=> !isLegendLabelExcluded(segment.label));
     const colorMap = assignSegmentColors(activeSegments.length ? activeSegments : segments);
     const total = activeSegments.reduce((sum,item)=> sum + item.value, 0);
     const hasSegments = segments.length > 0;
     const groupingLabel = graphGrouping === 'name' ? 'by names' : 'by categories';
+    const rangeLabel = formatGraphRangeLabel(graphDateRange);
     clearLegendHoldState();
     hideLegendPopup();
     graphLegendEl.innerHTML = '';
@@ -708,7 +788,9 @@
     }
     if(graphTotalScopeEl){
       if(total>0){
-        graphTotalScopeEl.textContent = `${graphType==='income'?'Income':'Expense'} · ${groupingLabel}`;
+        const scopeParts = [`${graphType==='income'?'Income':'Expense'} · ${groupingLabel}`];
+        if(rangeLabel && rangeLabel !== 'All time') scopeParts.push(rangeLabel);
+        graphTotalScopeEl.textContent = scopeParts.join(' · ');
       } else if(hasSegments){
         graphTotalScopeEl.textContent = `All ${graphGrouping === 'name' ? 'names' : 'categories'} excluded`;
       } else {
@@ -719,7 +801,7 @@
       if(!hasSegments){
         if(transactions.length){
           const alternateType = graphType === 'income' ? 'expense' : 'income';
-          const alternateSegments = buildGraphSegments(alternateType);
+          const alternateSegments = buildGraphSegments(alternateType, filteredTxs);
           const alternateTotal = alternateSegments.reduce((sum,item)=> sum + item.value, 0);
           if(alternateTotal > 0){
             graphType = alternateType;
@@ -793,9 +875,10 @@
     timelineCanvas.style.height = `${height}px`;
   }
 
-  function buildTimelineSeries(limit=45){
+  function buildTimelineSeries(limit=45, txList){
     const dayMap = new Map();
-    transactions.forEach(tx=>{
+    const source = Array.isArray(txList) ? txList : filterTransactionsByGraphRange(transactions);
+    source.forEach(tx=>{
       const date = new Date(tx.createdAt);
       if(Number.isNaN(date)) return;
       date.setHours(0,0,0,0);
@@ -826,7 +909,8 @@
   function renderTimelineGraph(){
     if(graphMode !== 'timeline') return;
     if(!timelineCanvas) return;
-    const { labels, income, expense, entriesByDay } = buildTimelineSeries();
+    const filteredTxs = filterTransactionsByGraphRange(transactions);
+    const { labels, income, expense, entriesByDay } = buildTimelineSeries(undefined, filteredTxs);
     timelineSeriesData = { labels, income, expense };
     timelineEntriesByDay = entriesByDay;
     if(labels.length){
@@ -1113,8 +1197,9 @@
     const grouping = groupKey === 'name' ? 'name' : 'category';
     const type = typeKey === 'income' ? 'income' : 'expense';
     const filterPositive = type === 'income';
+    const source = filterTransactionsByGraphRange(transactions);
     const map = new Map();
-    transactions.forEach(t=>{
+    source.forEach(t=>{
       const isIncome = t.amountCents >= 0;
       if(filterPositive && !isIncome) return;
       if(!filterPositive && isIncome) return;
@@ -2883,6 +2968,72 @@
   if(timelinePopupListEl){
     timelinePopupListEl.addEventListener('scroll', updateTimelineScrollArrows);
   }
+  function handleGraphRangePreset(key){
+    const next = computeGraphPresetRange(key);
+    graphDateRange = next || { type:'all', start:null, end:null };
+    hideGraphRangeMenu();
+    updateGraphRangeLabel();
+    refreshGraphIfVisible();
+  }
+  function handleGraphRangeCustom(){
+    if(!graphRangeStartInput || !graphRangeEndInput) return;
+    const startVal = graphRangeStartInput.value;
+    const endVal = graphRangeEndInput.value;
+    if(!startVal || !endVal) return;
+    const startDate = new Date(startVal);
+    const endDate = new Date(endVal);
+    if(Number.isNaN(startDate) || Number.isNaN(endDate)) return;
+    const startTs = startOfDayTs(startDate.getTime());
+    const endTs = endOfDayTs(endDate.getTime());
+    if(startTs > endTs) return;
+    graphDateRange = { type:'custom', start:startTs, end:endTs };
+    hideGraphRangeMenu();
+    updateGraphRangeLabel();
+    refreshGraphIfVisible();
+  }
+  function handleGraphRangeMenuClick(evt){
+    const presetBtn = evt.target.closest('button[data-range]');
+    if(presetBtn){
+      handleGraphRangePreset(presetBtn.dataset.range);
+      evt.stopPropagation();
+      return;
+    }
+    const clearBtn = evt.target.closest('#graphRangeClear');
+    if(clearBtn){
+      graphDateRange = { type:'all', start:null, end:null };
+      hideGraphRangeMenu();
+      updateGraphRangeLabel();
+      refreshGraphIfVisible();
+      evt.stopPropagation();
+      return;
+    }
+  }
+  if(graphRangeMenu){
+    graphRangeMenu.addEventListener('click', evt=>{
+      handleGraphRangeMenuClick(evt);
+      evt.stopPropagation();
+    });
+  }
+  if(graphRangeApplyBtn){
+    graphRangeApplyBtn.addEventListener('click', evt=>{
+      handleGraphRangeCustom();
+      evt.stopPropagation();
+    });
+  }
+  if(graphRangeBtn){
+    graphRangeBtn.addEventListener('click',()=>{
+      if(!graphRangeMenu) return;
+      if(graphRangeMenu.hidden) showGraphRangeMenu();
+      else hideGraphRangeMenu();
+    });
+  }
+  document.addEventListener('pointerdown', evt=>{
+    if(!graphRangeMenu || graphRangeMenu.hidden) return;
+    if(graphRangeMenu.contains(evt.target) || (graphRangeBtn && graphRangeBtn.contains(evt.target))) return;
+    hideGraphRangeMenu();
+  });
+  if(graphRangeMenu){ graphRangeMenu.hidden = true; graphRangeMenu.style.display = 'none'; }
+  if(graphRangeBtn){ graphRangeBtn.textContent = 'Time range: All time'; graphRangeBtn.setAttribute('aria-expanded','false'); }
   if(graphLegendEl){
     graphLegendEl.addEventListener('scroll', updateGraphLegendScrollIndicators);
   }
