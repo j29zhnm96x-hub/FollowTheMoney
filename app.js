@@ -149,6 +149,7 @@
   let currentScreen = 'home';
   let graphMode = 'classic'; // 'classic' | 'timeline'
   let graphDateRange = { type:'all', start:null, end:null };
+  let _ftm_lastGraphRangeToggle = 0;
   const graphColorCache = new Map();
   const graphPalette = ['#30d6a4','#ff4f6a','#6580ff','#f6c343','#58c7ff','#ff9fd5','#8be28b','#ffa25e','#ffd166','#b388ff'];
   let timelineSeriesData = null;
@@ -636,18 +637,33 @@
     graphRangeBtn.setAttribute('aria-expanded', graphRangeMenu && !graphRangeMenu.hidden ? 'true' : 'false');
   }
   function hideGraphRangeMenu(){
+    try{
+      console.debug && console.debug('[ftm] hideGraphRangeMenu called');
+    }catch(e){}
     if(graphRangeMenu && !graphRangeMenu.hidden){
       graphRangeMenu.hidden = true;
       graphRangeMenu.style.display = 'none';
       if(graphRangeBtn){ graphRangeBtn.setAttribute('aria-expanded','false'); }
+      _ftm_lastGraphRangeToggle = Date.now();
       updateGraphRangeLabel();
     }
   }
   function showGraphRangeMenu(){
+    try{
+      console.debug && console.debug('[ftm] showGraphRangeMenu called');
+    }catch(e){}
+    // small guard: avoid reopening immediately after a hide (could be from synthetic events)
+    const now = Date.now();
+    if(now - (_ftm_lastGraphRangeToggle || 0) < 40){
+      // ignore near-immediate toggles
+      try{ console.debug && console.debug('[ftm] showGraphRangeMenu suppressed (rapid toggle)'); }catch(e){}
+      return;
+    }
     if(graphRangeMenu){
       graphRangeMenu.hidden = false;
       graphRangeMenu.style.display = 'block';
       if(graphRangeBtn){ graphRangeBtn.setAttribute('aria-expanded','true'); }
+      _ftm_lastGraphRangeToggle = Date.now();
       updateGraphRangeLabel();
     }
   }
@@ -732,16 +748,20 @@
     if(!ctx) return;
     const filteredTxs = filterTransactionsByGraphRange(transactions);
     const segments = buildGraphSegments(undefined, filteredTxs);
-    const activeSegments = segments.filter(segment=> !isLegendLabelExcluded(segment.label));
-    const colorMap = assignSegmentColors(activeSegments.length ? activeSegments : segments);
-    const total = activeSegments.reduce((sum,item)=> sum + item.value, 0);
+    // separate included vs excluded segments so excluded items render at the bottom
+    const includedSegments = segments.filter(segment => !isLegendLabelExcluded(segment.label));
+    const excludedSegments = segments.filter(segment => isLegendLabelExcluded(segment.label));
+    const renderOrder = includedSegments.concat(excludedSegments);
+    const colorMap = assignSegmentColors(includedSegments.length ? includedSegments : segments);
+    const total = includedSegments.reduce((sum,item)=> sum + item.value, 0);
     const hasSegments = segments.length > 0;
     const groupingLabel = graphGrouping === 'name' ? 'by names' : 'by categories';
     const rangeLabel = formatGraphRangeLabel(graphDateRange);
     clearLegendHoldState();
     hideLegendPopup();
     graphLegendEl.innerHTML = '';
-    segments.forEach(segment=>{
+    // Render included first, then excluded (renderOrder already ordered)
+    renderOrder.forEach(segment=>{
       const color = colorMap.get(segment.label) || getGraphColor(segment.label);
       const legendItem = document.createElement('div');
       legendItem.className = 'graph-legend-item';
@@ -783,6 +803,12 @@
       graphLegendEl.appendChild(legendItem);
     });
     updateGraphLegendScrollIndicators();
+    // show/hide the center overlay depending on whether there's a meaningful total
+    const graphTotalOverlayEl = graphTotalValueEl ? graphTotalValueEl.parentElement : null;
+    if(graphTotalOverlayEl){
+      // hide overlay when total is zero (no data to show)
+      graphTotalOverlayEl.hidden = total <= 0;
+    }
     if(graphTotalValueEl){
       graphTotalValueEl.textContent = formatCurrency(total);
     }
@@ -827,7 +853,8 @@
     const radius = Math.min(centerX, centerY) - 12*(window.devicePixelRatio||1);
     const innerRadius = radius * 0.55;
     let startAngle = -Math.PI/2;
-    activeSegments.forEach(segment=>{
+    // draw only included segments (excluded segments are intentionally hidden)
+    includedSegments.forEach(segment=>{
       const sliceAngle = (segment.value/total) * Math.PI * 2;
       const endAngle = startAngle + sliceAngle;
       const color = colorMap.get(segment.label) || getGraphColor(segment.label);
@@ -3028,6 +3055,9 @@
     });
   }
   document.addEventListener('pointerdown', evt=>{
+    try{
+      console.debug && console.debug('[ftm] document.pointerdown target:', evt.target && (evt.target.tagName || evt.target.className));
+    }catch(e){}
     if(!graphRangeMenu || graphRangeMenu.hidden) return;
     if(graphRangeMenu.contains(evt.target) || (graphRangeBtn && graphRangeBtn.contains(evt.target))) return;
     hideGraphRangeMenu();

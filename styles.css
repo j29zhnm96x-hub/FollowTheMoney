@@ -213,6 +213,16 @@ html.theme-light .help-content section { background:rgba(0,0,0,0.02); border-col
 .summary-list-item .text { display:flex; flex-direction:column; gap:.15rem; }
 
 .settings-body { display:flex; flex-direction:column; gap:var(--settings-gap); }
+/* Small visible app version in settings, placed under Help & Support */
+.settings-help-btn-row { display:flex; flex-direction:column; align-items:center; }
+.settings-help-btn-row .app-version {
+  margin-top:0.35rem;
+  font-size:0.95rem;
+  font-weight:700;
+  color:var(--graph-shell-muted);
+  opacity:0.95;
+  line-height:1;
+}
 .settings-grid { display:flex; flex-direction:column; gap:var(--settings-gap); }
 @media (min-width:640px){ .settings-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(var(--settings-grid-min),1fr)); } }
 .settings-card { background:var(--panel); border:1px solid var(--panel-border); border-radius:var(--radius-lg); padding:var(--settings-card-padding); display:flex; flex-direction:column; gap:var(--settings-gap); }
@@ -435,10 +445,10 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
 .graph-range-list button:active,
 .graph-range-clear:active,
 .graph-range-apply:active { transform:scale(.97); }
-.graph-range-custom { display:flex; flex-direction:column; gap:.35rem; padding:.55rem .55rem; border:1px solid var(--graph-panel-border); border-radius:12px; background:rgba(255,255,255,0.06); box-sizing:border-box; }
-.graph-range-custom .range-row { display:flex; flex-direction:column; gap:.2rem; }
-.graph-range-custom label { font-size:.72rem; opacity:.8; }
-.graph-range-custom input[type="date"] { display:block; width:100%; max-width:100%; padding:.3rem .4rem; border-radius:10px; border:1px solid var(--graph-panel-border); background:var(--graph-pill-bg); color:var(--graph-shell-fg); font-size:.78rem; box-sizing:border-box; overflow:hidden; text-overflow:ellipsis; }
+.graph-range-custom { display:flex; flex-direction:column; gap:.35rem; padding:.45rem .45rem; border:0; border-radius:0; background:transparent; box-sizing:border-box; }
+.graph-range-custom .range-row { display:flex; flex-direction:column; gap:.2rem; align-items:center; }
+.graph-range-custom label { font-size:.72rem; opacity:.8; align-self:start; }
+.graph-range-custom input[type="date"] { display:block; width:85%; max-width:85%; padding:.3rem .4rem; border-radius:10px; border:1px solid var(--graph-panel-border); background:var(--graph-pill-bg); color:var(--graph-shell-fg); font-size:.78rem; box-sizing:border-box; overflow:hidden; text-overflow:ellipsis; }
 .graph-range-clear { background:transparent; border-style:dashed; }
 .graph-range-apply { background:var(--accent); color:#fff; border-color:var(--accent); }
 .theme-light .graph-range-menu {
@@ -457,7 +467,17 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
 .theme-light .graph-range-apply { background:var(--accent); color:#fff; border-color:var(--accent); }
 .theme-light .graph-range-custom {
   border-color:rgba(45,28,59,0.16);
-  background:rgba(45,28,59,0.05);
+  /* ensure the custom area remains transparent (user reported a stray gray box) */
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Force hidden state to remove any layout/interaction leftovers */
+.graph-range-menu[hidden] {
+  display: none !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
 }
 .theme-light .graph-range-custom input[type="date"] {
   background:rgba(45,28,59,0.06);
@@ -816,14 +836,20 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
   position:absolute;
   top:50%;
   left:50%;
-  transform:translate(-50%, -50%);
+  /* translate then scale to make the whole block 15% smaller so it fits inside
+     the donut hole; keep transform-origin centered so scaling is visually correct */
+  transform: translate(-50%, -50%) scale(0.85);
+  transform-origin: center center;
   text-align:center;
   pointer-events:none;
   color:var(--graph-shell-fg);
+  z-index: 40; /* ensure the center info stays above the canvas during resize/orientation */
+  /* constrain width so long scope text wraps within the circular hole */
+  max-width: 66%;
 }
 .graph-total-overlay .total-label { font-size:.85rem; font-weight:600; opacity:.65; letter-spacing:.5px; text-transform:uppercase; }
-.graph-total-overlay .total-amount { font-size:1.5rem; font-weight:900; margin:.2rem 0; }
-.graph-total-overlay .total-scope { font-size:.8rem; opacity:.6; }
+.graph-total-overlay .total-amount { font-size:1.5rem; font-weight:900; margin:.2rem 0; line-height:1; }
+.graph-total-overlay .total-scope { font-size:.8rem; opacity:.6; margin:0 auto; white-space:normal; word-break:break-word; hyphens:auto; max-width:100%; }
 .graph-breakdown-header {
   display:flex;
   align-items:flex-start;
@@ -859,12 +885,13 @@ html.theme-light .type-pill.active::after { background:#f5e8cf; border:2px solid
 .graph-legend-item .legend-amount { font-size:.85rem; opacity:.75; font-variant-numeric:tabular-nums; }
 .graph-legend-color { width:.65rem; height:.65rem; border-radius:50%; flex-shrink:0; margin-top:.25rem; }
 .graph-legend-item.excluded {
-  outline:1px solid rgba(255,255,255,0.65);
+  /* visually indicate excluded items with a red outline */
+  outline:2px solid var(--expense);
   outline-offset:-2px;
   opacity:1; /* keep popup fully opaque even when parent is excluded */
 }
 html.theme-light .graph-legend-item.excluded {
-  outline-color:rgba(35,30,55,0.4);
+  outline-color: var(--expense);
 }
 .graph-legend-item.excluded .legend-label,
 .graph-legend-item.excluded .legend-amount,

@@ -234,6 +234,7 @@
         <div class="settings-body">
           <div class="settings-help-btn-row" style="margin-bottom:.6rem;">
             <button id="btnHelpManual" class="btn ghost">Help & Support</button>
+            <div class="app-version" aria-hidden="true">v0.9.6.1</div>
           </div>
           <div class="settings-grid">
             <section class="settings-card" aria-labelledby="generalHeading">
@@ -398,11 +399,11 @@
             
             <h4>Classic View (Donut Chart)</h4>
             <ul>
-              <li><strong>Breakdown Card (left):</strong> Lists categories or names with percentages and amounts.</li>
-              <li><strong>Donut Chart (right):</strong> Visual pie chart showing proportions of each category/name.</li>
+              <li><strong>Breakdown Card (left):</strong> Lists categories or names with percentages and amounts. Excluded items are shown at the bottom of the list for clarity.</li>
+              <li><strong>Donut Chart (right):</strong> Visual pie chart showing proportions of each category/name. Click a legend row to briefly highlight the corresponding slice in the donut.</li>
               <li><strong>Center Overlay:</strong> Shows total amount and current scope (e.g., "Expense · by categories").</li>
-              <li><strong>Controls:</strong> Toggle between Income/Expense and group by Categories or Names.</li>
-              <li><strong>Press &amp; hold exclusions:</strong> Press and hold a breakdown card for ~3 seconds to open a popup that can exclude that category/name from the donut. Excluded cards gain a thin outline and an "Excluded" tag—long-press again to include them back in the chart.</li>
+              <li><strong>Controls:</strong> Toggle between Income/Expense and group by Categories or Names. Use the <strong>Time Range</strong> control to restrict the visualization to common presets (This week, Last week, This month, Last month) or a <em>Custom</em> date range — the donut and breakdown will update to reflect the selected period.</li>
+              <li><strong>Press &amp; hold exclusions:</strong> Press and hold a breakdown card for ~3 seconds to open a popup that can exclude that category/name from the donut. Excluded cards gain a red outline and an "Excluded" tag — they are moved to the bottom of the breakdown list to keep the focus on active items. Long-press an excluded card to include it again.</li>
             </ul>
 
             <h4>Timeline View</h4>
