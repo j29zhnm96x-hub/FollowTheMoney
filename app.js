@@ -22,6 +22,16 @@
   const toggleNoteBtn = $('#toggleNote');
   const noteContainer = $('#noteContainer');
   const noteInput = $('#noteInput');
+  const btnMovePart = $('#btnMovePart');
+  const movePartContainer = $('#movePartContainer');
+  const movePartSheetAmountEl = $('#movePartSheetAmount');
+  const movePartRawDigits = $('#movePartRawDigits');
+  const movePartCategoryInput = $('#movePartCategory');
+  const movePartNameInput = $('#movePartName');
+  const movePartCategorySuggestionsEl = $('#movePartCategorySuggestions');
+  const movePartNameSuggestionsEl = $('#movePartNameSuggestions');
+  const movePartConfirmBtn = $('#movePartConfirm');
+  const movePartBackBtn = $('#movePartBack');
   const settingsModal = $('#settingsModal');
   const helpModal = $('#helpModal');
   const themeToggleEl = $('#themeToggle');
@@ -49,6 +59,7 @@
   const historyTypeFiltersEl = $('#historyTypeFilters');
   const categoryChipRow = $('#categoryChipRow');
   const nameChipRow = $('#nameChipRow');
+  const historyChipSearchInput = $('#historyChipSearch');
   const historyGroupSummaryEl = $('#historyGroupSummary');
   const summaryScreen = $('#screen-summary');
   const summaryLabelEl = $('#summaryLabel');
@@ -112,6 +123,7 @@
   let historyTypeFilter = 'all'; // 'all' | 'income' | 'expense'
   let historyCategoryFilter = null;
   let historyNameFilter = null;
+  let historyChipSearchText = '';
   let historySummaryState = null;
   let summaryPressTimer = null;
   let previousSummaryReturnScreen = 'history';
@@ -523,6 +535,127 @@
     return String(a).toLowerCase() === String(b).toLowerCase();
   };
   const pad2 = num => String(num).padStart(2,'0');
+
+  function updateMovePartAmount(){
+    if(!movePartRawDigits || !movePartSheetAmountEl) return;
+    const digits = movePartRawDigits.value.replace(/\D/g,'') || '0';
+    const cents = parseInt(digits, 10);
+    movePartSheetAmountEl.textContent = formatCurrency(cents);
+    if(movePartConfirmBtn) movePartConfirmBtn.dataset.cents = String(cents);
+    updateMovePartConfirmState();
+  }
+
+  function gatherMovePartValues(kind, filterText=''){
+    if(!sheetType) return [];
+    const isCategory = kind === 'category';
+    const collectionKeyName = isCategory ? 'categories' : 'names';
+    const base = new Set();
+    const selectedCategory = movePartCategoryInput && movePartCategoryInput.value.trim();
+    const includeStoredNames = isCategory || !selectedCategory;
+    if(includeStoredNames){
+      const fromSettings = getCollection(sheetType, collectionKeyName);
+      fromSettings.forEach(v=>{ if(v) base.add(v); });
+    }
+    transactions.forEach(t=>{
+      const isIncome = t.amountCents >= 0;
+      if(sheetType === 'income' && !isIncome) return;
+      if(sheetType === 'expense' && isIncome) return;
+      if(!isCategory && selectedCategory){
+        if(!t.category || !equalsIgnoreCase(t.category, selectedCategory)) return;
+      }
+      const value = isCategory ? t.category : t.name;
+      if(value) base.add(value);
+    });
+    const text = (filterText || '').trim().toLowerCase();
+    return Array.from(base)
+      .filter(Boolean)
+      .filter(val=> !text || String(val).toLowerCase().includes(text))
+      .sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
+  }
+
+  function renderMovePartSuggestions(kind){
+    const container = kind === 'category' ? movePartCategorySuggestionsEl : movePartNameSuggestionsEl;
+    if(!container) return;
+    if(kind === 'name' && movePartNameInput && movePartNameInput.disabled){
+      container.hidden = true;
+      container.innerHTML = '';
+      return;
+    }
+    const inputEl = kind === 'category' ? movePartCategoryInput : movePartNameInput;
+    const filterValue = inputEl ? inputEl.value : '';
+    const values = gatherMovePartValues(kind, filterValue);
+    if(!values.length){
+      container.hidden = true;
+      container.innerHTML = '';
+      return;
+    }
+    container.hidden = false;
+    container.innerHTML = '';
+    values.forEach(val=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'suggestion-chip';
+      btn.textContent = val;
+      btn.dataset.kind = kind;
+      btn.dataset.value = val;
+      btn.dataset.scope = 'move-part';
+      container.appendChild(btn);
+    });
+  }
+
+  function updateMovePartNameInputState(){
+    if(!movePartNameInput) return;
+    const hasCategory = movePartCategoryInput && movePartCategoryInput.value.trim().length > 0;
+    movePartNameInput.disabled = !hasCategory;
+    if(!hasCategory) movePartNameInput.value = '';
+    renderMovePartSuggestions('name');
+    updateMovePartConfirmState();
+  }
+
+  function updateMovePartConfirmState(){
+    if(!movePartConfirmBtn) return;
+    const cents = parseInt((movePartConfirmBtn.dataset.cents || '0'), 10);
+    const okAmount = Number.isFinite(cents) && cents > 0;
+    const catOk = !!(movePartCategoryInput && movePartCategoryInput.value.trim().length > 0);
+    const nameOk = !!(movePartNameInput && !movePartNameInput.disabled && movePartNameInput.value.trim().length > 0);
+    movePartConfirmBtn.disabled = !(okAmount && catOk && nameOk);
+    if(!okAmount) movePartConfirmBtn.dataset.cents = '0';
+  }
+
+  function openMovePartOverlay(){
+    if(!movePartContainer) return;
+    if(sheetMode !== 'edit' || !editingTransaction || !sheetType) return;
+    movePartContainer.hidden = false;
+    if(btnMovePart) btnMovePart.hidden = true;
+
+    // Default to the current category to help reveal relevant names, but allow changing.
+    if(movePartCategoryInput){
+      movePartCategoryInput.value = (editingTransaction.category || '').trim();
+    }
+    if(movePartNameInput){
+      movePartNameInput.value = '';
+    }
+    if(movePartRawDigits){
+      movePartRawDigits.value = '0';
+    }
+    updateMovePartAmount();
+    renderMovePartSuggestions('category');
+    updateMovePartNameInputState();
+    updateMovePartConfirmState();
+    setTimeout(()=>{ try{ movePartRawDigits && movePartRawDigits.focus(); }catch(_){} }, 50);
+  }
+
+  function closeMovePartOverlay(){
+    if(movePartContainer) movePartContainer.hidden = true;
+    if(btnMovePart) btnMovePart.hidden = !(sheetMode === 'edit' && !!editingTransaction);
+    if(movePartRawDigits) movePartRawDigits.value = '0';
+    if(movePartSheetAmountEl) movePartSheetAmountEl.textContent = formatCurrency(0);
+    if(movePartCategoryInput) movePartCategoryInput.value = '';
+    if(movePartNameInput) movePartNameInput.value = '';
+    if(movePartCategorySuggestionsEl){ movePartCategorySuggestionsEl.hidden = true; movePartCategorySuggestionsEl.innerHTML = ''; }
+    if(movePartNameSuggestionsEl){ movePartNameSuggestionsEl.hidden = true; movePartNameSuggestionsEl.innerHTML = ''; }
+    if(movePartConfirmBtn){ delete movePartConfirmBtn.dataset.cents; movePartConfirmBtn.disabled = true; }
+  }
   function formatDateTime(timestamp, includeTime=true){
     const date = new Date(timestamp);
     if(Number.isNaN(date)) return '';
@@ -1338,9 +1471,14 @@
     const isCategory = kind === 'category';
     const collectionKeyName = isCategory ? 'categories' : 'names';
     const base = new Set();
-    const fromSettings = getCollection(sheetType, collectionKeyName);
-    fromSettings.forEach(v=>{ if(v) base.add(v); });
     const selectedCategory = categoryInput && categoryInput.value.trim();
+    // If a category is selected, names should only come from that category (if any).
+    // We don't have a persistent category->names map, so we rely on existing transactions.
+    const includeStoredNames = isCategory || !selectedCategory;
+    if(includeStoredNames){
+      const fromSettings = getCollection(sheetType, collectionKeyName);
+      fromSettings.forEach(v=>{ if(v) base.add(v); });
+    }
     transactions.forEach(t=>{
       const isIncome = t.amountCents>=0;
       if(sheetType === 'income' && !isIncome) return;
@@ -1387,6 +1525,27 @@
     if(!nameListEl) return;
     nameListEl.innerHTML='';
     const type = sheetType || historyTypeFilter || 'income';
+    // In the add/edit sheet, if a category is selected, only suggest names used in that category.
+    const selectedCategory = sheetType && categoryInput && categoryInput.value.trim();
+    if(sheetType && selectedCategory){
+      const set = new Set();
+      transactions.forEach(t=>{
+        const isIncome = t.amountCents >= 0;
+        if(sheetType === 'income' && !isIncome) return;
+        if(sheetType === 'expense' && isIncome) return;
+        if(!t.category || !equalsIgnoreCase(t.category, selectedCategory)) return;
+        if(t.name) set.add(t.name);
+      });
+      Array.from(set)
+        .filter(Boolean)
+        .sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}))
+        .forEach(n=>{
+          const opt=document.createElement('option');
+          opt.value=n;
+          nameListEl.appendChild(opt);
+        });
+      return;
+    }
     getCollection(type,'names').forEach(n=>{
       if(!n) return;
       const opt=document.createElement('option');
@@ -1431,13 +1590,29 @@
         btn.classList.toggle('active', btn.dataset.type===historyTypeFilter);
       });
     }
-    const categoryValues = gatherValues('category', historyTypeFilter);
+    let categoryValues = gatherValues('category', historyTypeFilter);
     if(historyCategoryFilter && !categoryValues.some(cat=>equalsIgnoreCase(cat, historyCategoryFilter))){
       historyCategoryFilter = null;
     }
-    const nameValues = gatherValues('name', historyTypeFilter);
+    let nameValues = gatherValues('name', historyTypeFilter);
     if(historyNameFilter && !nameValues.some(n=>equalsIgnoreCase(n, historyNameFilter))){
       historyNameFilter = null;
+    }
+    const query = (historyChipSearchText || '').trim().toLowerCase();
+    if(query){
+      const applyQuery = values => values.filter(v=> String(v).toLowerCase().includes(query));
+      categoryValues = applyQuery(categoryValues);
+      nameValues = applyQuery(nameValues);
+      // keep active filters visible even if they don't match the search text
+      if(historyCategoryFilter && !categoryValues.some(v=>equalsIgnoreCase(v, historyCategoryFilter))){
+        categoryValues = [historyCategoryFilter, ...categoryValues];
+      }
+      if(historyNameFilter && !nameValues.some(v=>equalsIgnoreCase(v, historyNameFilter))){
+        nameValues = [historyNameFilter, ...nameValues];
+      }
+      // de-dupe in case we prepended
+      categoryValues = Array.from(new Map(categoryValues.map(v=>[String(v).toLowerCase(), v])).values());
+      nameValues = Array.from(new Map(nameValues.map(v=>[String(v).toLowerCase(), v])).values());
     }
     renderChipRow(categoryChipRow, categoryValues, historyCategoryFilter, 'category');
     renderChipRow(nameChipRow, nameValues, historyNameFilter, 'name');
@@ -2305,6 +2480,10 @@
     if(sheetPanel){
       sheetPanel.dataset.mode = sheetMode;
     }
+    if(btnMovePart){
+      btnMovePart.hidden = !(sheetMode === 'edit' && !!existingTx);
+    }
+    closeMovePartOverlay();
     const baseDigits = existingTx ? String(Math.abs(existingTx.amountCents)) : '0';
     rawDigits.value=baseDigits; 
     updateSheetAmount(); 
@@ -2382,6 +2561,7 @@
     if(sheetPanel){
       delete sheetPanel.dataset.mode;
     }
+    closeMovePartOverlay();
     if(confirmBtn){
       delete confirmBtn.dataset.processing;
     }
@@ -2865,6 +3045,159 @@
       noteInput.focus();
     }
   });
+
+  if(btnMovePart){
+    btnMovePart.addEventListener('click', ()=>{
+      openMovePartOverlay();
+    });
+  }
+  if(movePartBackBtn){
+    movePartBackBtn.addEventListener('click', ()=>{
+      closeMovePartOverlay();
+    });
+  }
+  if(movePartSheetAmountEl && movePartRawDigits){
+    movePartSheetAmountEl.addEventListener('click', ()=>{
+      movePartRawDigits.focus();
+      movePartRawDigits.select && movePartRawDigits.select();
+    });
+  }
+  if(movePartRawDigits){
+    movePartRawDigits.addEventListener('keydown', e=>{
+      if(e.key==='Backspace'){
+        e.preventDefault();
+        const v = movePartRawDigits.value.replace(/\D/g,'');
+        movePartRawDigits.value = v.length<=1 ? '0' : v.slice(0,-1);
+        updateMovePartAmount();
+        return;
+      }
+      if(/^\d$/.test(e.key)){
+        e.preventDefault();
+        const v = movePartRawDigits.value.replace(/\D/g,'') || '0';
+        movePartRawDigits.value = v==='0' ? e.key : v + e.key;
+        updateMovePartAmount();
+        return;
+      }
+      if(e.key==='Enter'){
+        e.preventDefault();
+      }
+    });
+    movePartRawDigits.addEventListener('input', updateMovePartAmount);
+  }
+  if(movePartCategoryInput){
+    movePartCategoryInput.addEventListener('input', ()=>{
+      updateMovePartNameInputState();
+      renderMovePartSuggestions('category');
+      renderMovePartSuggestions('name');
+    });
+  }
+  if(movePartNameInput){
+    movePartNameInput.addEventListener('input', ()=>{
+      renderMovePartSuggestions('name');
+      updateMovePartConfirmState();
+    });
+  }
+  function handleMovePartSuggestionClick(e){
+    const btn = e.target.closest('.suggestion-chip');
+    if(!btn) return;
+    const kind = btn.dataset.kind;
+    const value = btn.dataset.value || '';
+    const targetInput = kind === 'category' ? movePartCategoryInput : movePartNameInput;
+    if(!targetInput) return;
+    if(kind === 'name' && targetInput.disabled) return;
+    targetInput.value = value;
+    targetInput.dispatchEvent(new Event('input', { bubbles:true }));
+    targetInput.focus();
+  }
+  if(movePartCategorySuggestionsEl) movePartCategorySuggestionsEl.addEventListener('click', handleMovePartSuggestionClick);
+  if(movePartNameSuggestionsEl) movePartNameSuggestionsEl.addEventListener('click', handleMovePartSuggestionClick);
+
+  async function handleMovePartConfirm(){
+    if(!movePartConfirmBtn || movePartConfirmBtn.disabled) return;
+    if(sheetMode !== 'edit' || !editingTransaction || !sheetType) return;
+
+    const moveCents = parseInt(movePartConfirmBtn.dataset.cents || '0', 10);
+    const categoryValue = movePartCategoryInput ? movePartCategoryInput.value.trim() : '';
+    const nameValue = movePartNameInput && !movePartNameInput.disabled ? movePartNameInput.value.trim() : '';
+    if(!moveCents || moveCents <= 0 || !categoryValue || !nameValue){
+      return;
+    }
+
+    const sourceAbs = Math.abs(editingTransaction.amountCents);
+    if(moveCents > sourceAbs){
+      alert('Amount to move cannot exceed the transaction amount.');
+      return;
+    }
+
+    // Prevent creating a negative remainder. If equal, we delete the source tx.
+    const remainderAbs = sourceAbs - moveCents;
+    if(remainderAbs < 0){
+      alert('Invalid amount.');
+      return;
+    }
+
+    movePartConfirmBtn.disabled = true;
+    const sign = editingTransaction.amountCents >= 0 ? 1 : -1;
+    const newTx = {
+      id: generateId(),
+      amountCents: sign * moveCents,
+      createdAt: editingTransaction.createdAt,
+      category: categoryValue,
+      name: nameValue
+    };
+
+    try{
+      await dbAddTransaction(newTx);
+      await Promise.all([
+        ensureCollectionEntry(sheetType,'categories', categoryValue),
+        ensureCollectionEntry(sheetType,'names', nameValue)
+      ]);
+
+      if(remainderAbs === 0){
+        await dbDeleteTransaction(editingTransaction.id);
+        transactions = transactions.filter(t=> t.id !== editingTransaction.id);
+        transactions.unshift(newTx);
+        updateBalance();
+        renderRecent();
+        if(!historyScreen.hidden) renderHistory();
+        updateSeasonalStats();
+        refreshGraphIfVisible();
+        scheduleLocalBackup('move-part-transfer');
+        closeMovePartOverlay();
+        closeSheet();
+        return;
+      }
+
+      const updatedSource = { ...editingTransaction, amountCents: sign * remainderAbs };
+      await dbAddTransaction(updatedSource);
+
+      const idx = transactions.findIndex(t=> t.id === updatedSource.id);
+      if(idx !== -1) transactions[idx] = updatedSource;
+      transactions.unshift(newTx);
+      transactions.sort((a,b)=>b.createdAt - a.createdAt);
+
+      editingTransaction = updatedSource;
+      rawDigits.value = String(remainderAbs);
+      updateSheetAmount();
+
+      updateBalance();
+      renderRecent();
+      if(!historyScreen.hidden) renderHistory();
+      updateSeasonalStats();
+      refreshGraphIfVisible();
+      scheduleLocalBackup('move-part-transfer');
+
+      closeMovePartOverlay();
+    }catch(err){
+      console.error('Move-part transfer failed', err);
+      alert('Unable to transfer part of the amount right now.');
+      movePartConfirmBtn.disabled = false;
+    }
+  }
+
+  if(movePartConfirmBtn){
+    movePartConfirmBtn.addEventListener('click', handleMovePartConfirm);
+  }
   if(recurringToggle && recurringFrequency){
     recurringToggle.addEventListener('change',()=>{
       recurringFrequency.hidden = !recurringToggle.checked;
@@ -2885,6 +3218,12 @@
     nameInput.addEventListener('input',()=>{
       renderSheetSuggestions('name');
       updateConfirmState();
+    });
+  }
+  if(historyChipSearchInput){
+    historyChipSearchInput.addEventListener('input', ()=>{
+      historyChipSearchText = historyChipSearchInput.value || '';
+      renderFilterChips();
     });
   }
   if(historyTypeFiltersEl){
@@ -2920,6 +3259,12 @@
       historyNameFilter = nextValue;
     } else {
       return;
+    }
+    // If the user was searching chips, clear the search after selecting one so
+    // the full chip lists come back (and names can reveal for the chosen category).
+    if(historyChipSearchInput && historyChipSearchInput.value){
+      historyChipSearchInput.value = '';
+      historyChipSearchText = '';
     }
     renderFilterChips();
     renderHistory();

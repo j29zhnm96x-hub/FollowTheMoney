@@ -68,6 +68,9 @@
       </div>
       <div id="historyGroupSummary" class="group-summary" hidden></div>
       <div id="historyFilter" class="history-filter" hidden></div>
+      <div class="history-chip-search" aria-label="Search filters">
+        <input id="historyChipSearch" type="text" class="text-input" placeholder="Search categories or names" autocomplete="off" />
+      </div>
       <div class="chip-row" id="categoryChipRow" aria-label="Categories"></div>
       <div class="chip-row" id="nameChipRow" aria-label="Names"></div>
       <main class="history-list" id="historyList" aria-live="polite"></main>
@@ -190,7 +193,7 @@
                 <h2>Timeline</h2>
                 <p class="timeline-subtitle">Income vs Expense over time</p>
               </div>
-              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.5rem;">
+              <div class="timeline-header-actions">
                 <button id="btnTimelineCursorToggle" class="timeline-cursor-toggle" type="button" aria-pressed="false">Inspect</button>
                 <div class="timeline-legend">
                   <span><span class="dot income"></span> Income</span>
@@ -232,7 +235,7 @@
           </label>
         </div>
         <div class="settings-body">
-          <div class="settings-help-btn-row" style="margin-bottom:.6rem;">
+          <div class="settings-help-btn-row with-bottom-gap">
             <button id="btnHelpManual" class="btn ghost">Help & Support</button>
             <div class="app-version" aria-hidden="true">v0.9.6.1</div>
           </div>
@@ -565,20 +568,46 @@
         <input id="rawDigits" type="tel" inputmode="numeric" class="hidden-input" />
         <div id="categoryContainer" class="category-container" hidden>
           <label for="categoryInput" class="small-label">Category</label>
-          <input id="categoryInput" type="text" class="text-input" list="categoryList" placeholder="Select or type category" autocomplete="off" />
-          <datalist id="categoryList"></datalist>
+          <input id="categoryInput" type="text" class="text-input" placeholder="Select or type category" autocomplete="off" autocorrect="off" spellcheck="false" />
           <div id="categorySuggestions" class="suggestion-row" hidden></div>
         </div>
         <div id="nameContainer" class="name-container" hidden>
           <label for="nameInput" class="small-label">Name</label>
-          <input id="nameInput" type="text" class="text-input" list="nameList" placeholder="Name" autocomplete="off" disabled />
-          <datalist id="nameList"></datalist>
+          <input id="nameInput" type="text" class="text-input" placeholder="Name" autocomplete="off" autocorrect="off" spellcheck="false" disabled />
           <div id="nameSuggestions" class="suggestion-row" hidden></div>
         </div>
         <div id="noteContainer" class="note-container" hidden>
           <textarea id="noteInput" placeholder="Note (optional)"></textarea>
         </div>
         <button id="toggleNote" class="btn ghost full">Add note</button>
+        <button id="btnMovePart" class="btn ghost full" hidden>Move a part of the amount to...</button>
+
+        <div id="movePartContainer" class="move-part-container" hidden aria-label="Move part of amount">
+          <div class="move-part-header">
+            <h3>Move part of amount</h3>
+            <p class="preview small">Creates a new entry and reduces the current one.</p>
+          </div>
+          <div class="setting-row">
+            <label class="small-label">Amount to move</label>
+            <div id="movePartSheetAmount" class="amount-display">0.00 €</div>
+            <input id="movePartRawDigits" type="tel" inputmode="numeric" class="hidden-input" />
+            <div class="preview small">Tap the amount to edit.</div>
+          </div>
+          <div class="setting-row">
+            <label for="movePartCategory" class="small-label">Category</label>
+            <input id="movePartCategory" type="text" class="text-input" placeholder="Select or type category" autocomplete="off" autocorrect="off" spellcheck="false" />
+            <div id="movePartCategorySuggestions" class="suggestion-row" hidden></div>
+          </div>
+          <div class="setting-row">
+            <label for="movePartName" class="small-label">Name</label>
+            <input id="movePartName" type="text" class="text-input" placeholder="Name" autocomplete="off" autocorrect="off" spellcheck="false" disabled />
+            <div id="movePartNameSuggestions" class="suggestion-row" hidden></div>
+          </div>
+          <div class="move-part-actions">
+            <button id="movePartConfirm" class="btn accent full" type="button" disabled>Confirm transfer</button>
+            <button id="movePartBack" class="btn ghost full" type="button">Back</button>
+          </div>
+        </div>
         <div id="editDateContainer" class="date-edit" hidden>
           <label for="editDateInput" class="small-label">Transaction date & time</label>
           <input id="editDateInput" type="datetime-local" class="text-input" />
