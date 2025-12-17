@@ -78,6 +78,7 @@
   const dateFormatEl = $('#dateFormat');
   const singleButtonModeToggle = $('#singleButtonModeToggle');
   const currencySymbolInput = $('#currencySymbol');
+  const languageSelectEl = $('#languageSelect');
   const btnExportShare = $('#btnExportShare');
   const btnImportData = $('#btnImportData');
   const importFileInput = $('#importFile');
@@ -138,6 +139,7 @@
     seasonIncomeCents: 0,
     dateFormat: 'dmy',
     currencySymbol: '€',
+    language: 'en',
     historyLocked: true,
     singleButtonMode: false,
     incomeCategories: [],
@@ -248,11 +250,9 @@
       changed = true;
     }
     if(changed && !silent){
-      updateBalance();
-      renderRecent();
-      if(!historyScreen.hidden) renderHistory();
+      setLanguage(settings.language || 'en', false);
       syncSettingsUI();
-      refreshGraphIfVisible();
+      return;
     }
   }
 
@@ -358,7 +358,7 @@
     if(!entries.length){
       const empty = document.createElement('li');
       empty.className = 'timeline-popup-empty';
-      empty.textContent = 'No transactions on this day';
+      empty.textContent = t('no_transactions_on_day');
       timelinePopupListEl.appendChild(empty);
       updateTimelineScrollArrows();
       return;
@@ -367,7 +367,7 @@
       const li = document.createElement('li');
       li.className = tx.amountCents >= 0 ? 'income' : 'expense';
       const labelSpan = document.createElement('span');
-      const primary = (tx.name && tx.name.trim()) || (tx.category && tx.category.trim()) || 'Untitled';
+      const primary = (tx.name && tx.name.trim()) || (tx.category && tx.category.trim()) || t('untitled');
       labelSpan.textContent = primary;
       const amountStrong = document.createElement('strong');
       amountStrong.textContent = formatCurrency(tx.amountCents);
@@ -483,6 +483,7 @@
         seasonIncomeCents: 0,
         dateFormat: 'dmy',
         currencySymbol: '€',
+        language: 'en',
         historyLocked: true,
         singleButtonMode: false,
         incomeCategories: [],
@@ -509,6 +510,841 @@
       tx.onerror = ()=> reject(tx.error);
     });
   }
+
+  // i18n
+  const I18N = {
+    en: {
+      nav_history: 'History',
+      nav_settings: 'Settings',
+      nav_home: 'Home',
+      nav_back: 'Back',
+      nav_summary: 'Summary',
+      nav_insights: 'Insights',
+
+      close: 'Close',
+      cancel: 'Cancel',
+      back: 'Back',
+
+      income: 'Income',
+      expense: 'Expense',
+      expenses: 'Expenses',
+      all: 'All',
+
+      today: 'Today',
+      daily: 'Daily',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+
+      balance: 'Balance',
+      add_income_aria: 'Add income',
+      add_expense_aria: 'Add expense',
+      recent_aria: 'Recent transactions',
+
+      search_categories_or_names: 'Search categories or names',
+      search_filters: 'Search filters',
+      all_categories: 'All categories',
+      all_names: 'All names',
+      all_entries: 'All entries',
+      no_filters_applied: 'No filters applied',
+
+      showing_prefix: 'Showing:',
+      recurring: 'Recurring',
+      edit_transaction_aria: 'Edit transaction',
+
+      no_recent_entries: 'No recent entries',
+      no_transactions_yet: 'No transactions yet.',
+      no_transactions_in_period: 'No transactions in this period.',
+      no_transactions_on_day: 'No transactions on this day',
+      no_transactions_in_selection: 'No transactions in this selection yet.',
+
+      untitled: 'Untitled',
+      unnamed: 'Unnamed',
+      uncategorized: 'Uncategorized',
+
+      add_note: 'Add note',
+      note_optional: 'Note (optional)',
+      save_changes: 'Save Changes',
+      add_income: 'Add Income',
+      add_expense: 'Add Expense',
+
+      income_category_placeholder: 'Income category',
+      expense_category_placeholder: 'Expense category',
+      sheet_type_income: 'Income',
+      sheet_type_expense: 'Expense',
+
+      move_part_btn: 'Move a part of the amount to...',
+      move_part_title: 'Move part of amount',
+      move_part_subtitle: 'Creates a new entry and reduces the current one.',
+      amount_to_move: 'Amount to move',
+      tap_amount_to_edit: 'Tap the amount to edit.',
+      category: 'Category',
+      name: 'Name',
+      confirm_transfer: 'Confirm transfer',
+
+      excluded: 'Excluded',
+
+      time_range_prefix: 'Time range:',
+      all_time: 'All time',
+      this_week: 'This week',
+      last_week: 'Last week',
+      this_month: 'This month',
+      last_month: 'Last month',
+      custom_range_prefix: 'Custom:',
+      start: 'Start',
+      end: 'End',
+      apply_custom: 'Apply custom',
+      breakdown: 'Breakdown',
+      total: 'Total',
+      by_categories: 'by categories',
+      by_names: 'by names',
+      all_categories_excluded: 'All categories excluded',
+      all_names_excluded: 'All names excluded',
+      no_data_yet: 'No data yet',
+      no_data_to_visualize: 'No data to visualize yet.',
+      timeline: 'Timeline',
+      income_vs_expense_over_time: 'Income vs Expense over time',
+      inspect: 'Inspect',
+      need_two_days: 'Need at least two days of data to draw trends.',
+
+      toggle_timeline_view_aria: 'Toggle timeline view',
+      graph_type_aria: 'Graph type',
+      group_by_aria: 'Group by',
+      categories: 'Categories',
+      names: 'Names',
+
+      budget_mode: 'Budget mode',
+      off_season: 'Off-season',
+      season_active: 'Season active',
+
+      no_season_set: 'No season set.',
+      season_active_sentence: 'Season active.',
+      off_season_mode: 'Off-season mode.',
+      days_to_start_season_one: '1 day to start of working season.',
+      days_to_start_season_many: '{days} days to start of working season.',
+      allowance_dwm: 'Allowance (D/W/M): {d} / {w} / {m}',
+
+      help_support: 'Help & Support',
+      general: 'General',
+      general_subtitle: 'Choose how dates appear and how you add entries.',
+      date_format: 'Date format',
+      currency_symbol: 'Currency symbol',
+      language: 'Language',
+      changes_text_immediately: 'Changes the app text immediately.',
+      home_input_buttons: 'Home input buttons',
+      single_button_mode: 'Single button mode',
+      tap_for_expense_hold_for_income: 'Tap for expense, press & hold 1s for income.',
+      applies_to_recent_and_history: 'Applies to recent cards and history.',
+      shown_after_amounts: 'Shown after every amount (e.g. €, $, Kč).',
+
+      seasonal_budget: 'Seasonal Budget',
+      seasonal_budget_subtitle: 'Enable seasonal mode or use simple budget tracking.',
+      seasonal_budget_mode: 'Seasonal Budget Mode',
+      seasonal_budget_preview: 'When off, dashboard shows Today/This Week/This Month income & expenses.',
+
+      history_lock: 'History lock',
+      history_lock_subtitle: 'Prevent accidental swipes from deleting entries.',
+      lock_swipe_to_delete: 'Lock swipe-to-delete',
+      lock_swipe_preview: 'You can still edit entries using the pencil icon.',
+
+      data_export_import: 'Data export & import',
+      data_export_import_subtitle: 'Back up everything and move between devices.',
+      share_backup: 'Share backup',
+      share_backup_preview: 'Uses the OS share sheet when available.',
+      import_backup: 'Import backup',
+      import_backup_preview: 'Select a saved .json backup file to restore.',
+
+      advanced: 'Advanced',
+      advanced_subtitle: 'Reset the app if you need a clean slate.',
+      clear_all_data: 'Clear All Data',
+      clear_all_preview: 'Clears all transactions and resets settings. A confirmation will appear when you press the button.',
+
+      share_sheet_not_available: 'Share sheet not available. Backup downloaded instead.',
+      unable_export_backup: 'Unable to export backup right now. Please try again.',
+      import_replace_confirm: 'Importing will replace current data. Continue?',
+      backup_imported_success: 'Backup imported successfully.',
+      backup_import_failed: 'Could not import this backup file. Please make sure it was exported from FollowTheMoney.',
+      unable_read_file: 'Unable to read the selected file.',
+      clear_all_confirm: 'Clear all data? This will delete all transactions and reset settings. This cannot be undone.',
+      delete_transaction_confirm: 'Delete this transaction?',
+      amount_move_exceeds: 'Amount to move cannot exceed the transaction amount.',
+      invalid_amount: 'Invalid amount.',
+      transfer_failed: 'Unable to transfer part of the amount right now.',
+
+      amount_entry_aria: 'Amount entry',
+      select_or_type_category: 'Select or type category',
+
+      transaction_date_time: 'Transaction date & time',
+      adjust_backdate_hint: 'Adjust this when editing to backdate entries.',
+      repeat_this_transaction: 'Repeat this transaction',
+      frequency: 'Frequency',
+      yearly: 'Yearly',
+
+      start_of_working_season: 'Start of working season',
+      end_of_working_season: 'End of working season',
+      save_season_dates: 'Save Season Dates'
+      ,
+      summary_total_balance: 'Total balance',
+      summary_entries: 'Entries',
+      summary_average_amount: 'Average amount',
+      summary_preview_transactions_aria: 'Preview transactions',
+      summary_preview: 'Preview',
+      summary_hint: 'Swipe left on an entry to toggle whether it counts toward the average.',
+
+      income_only: 'Income only',
+      expenses_only: 'Expenses only',
+      filter_category_prefix: 'Category:',
+      filter_name_prefix: 'Name:',
+      filter_excluded_prefix: 'Excluded:'
+    },
+    hr: {
+      nav_history: 'Povijest',
+      nav_settings: 'Postavke',
+      nav_home: 'Početna',
+      nav_back: 'Natrag',
+      nav_summary: 'Sažetak',
+      nav_insights: 'Uvidi',
+
+      close: 'Zatvori',
+      cancel: 'Odustani',
+      back: 'Natrag',
+
+      income: 'Prihod',
+      expense: 'Trošak',
+      expenses: 'Troškovi',
+      all: 'Sve',
+
+      today: 'Danas',
+      daily: 'Dnevno',
+      weekly: 'Tjedno',
+      monthly: 'Mjesečno',
+
+      balance: 'Stanje',
+      add_income_aria: 'Dodaj prihod',
+      add_expense_aria: 'Dodaj trošak',
+      recent_aria: 'Nedavne transakcije',
+
+      search_categories_or_names: 'Pretraži kategorije ili nazive',
+      search_filters: 'Pretraži filtere',
+      all_categories: 'Sve kategorije',
+      all_names: 'Svi nazivi',
+      all_entries: 'Sve stavke',
+      no_filters_applied: 'Nema aktivnih filtera',
+
+      showing_prefix: 'Prikaz:',
+      recurring: 'Ponavljajuće',
+      edit_transaction_aria: 'Uredi transakciju',
+
+      no_recent_entries: 'Nema nedavnih stavki',
+      no_transactions_yet: 'Još nema transakcija.',
+      no_transactions_in_period: 'Nema transakcija u ovom razdoblju.',
+      no_transactions_on_day: 'Nema transakcija za taj dan',
+      no_transactions_in_selection: 'Još nema transakcija u ovom odabiru.',
+
+      untitled: 'Bez naslova',
+      unnamed: 'Bez naziva',
+      uncategorized: 'Bez kategorije',
+
+      add_note: 'Dodaj bilješku',
+      note_optional: 'Bilješka (neobavezno)',
+      save_changes: 'Spremi promjene',
+      add_income: 'Dodaj prihod',
+      add_expense: 'Dodaj trošak',
+
+      income_category_placeholder: 'Kategorija prihoda',
+      expense_category_placeholder: 'Kategorija troška',
+      sheet_type_income: 'Prihod',
+      sheet_type_expense: 'Trošak',
+
+      move_part_btn: 'Premjesti dio iznosa u...',
+      move_part_title: 'Premjesti dio iznosa',
+      move_part_subtitle: 'Stvara novi unos i umanjuje trenutni.',
+      amount_to_move: 'Iznos za premještanje',
+      tap_amount_to_edit: 'Dodirni iznos za unos.',
+      category: 'Kategorija',
+      name: 'Naziv',
+      confirm_transfer: 'Potvrdi prijenos',
+
+      excluded: 'Isključeno',
+
+      time_range_prefix: 'Vremenski raspon:',
+      all_time: 'Cijelo razdoblje',
+      this_week: 'Ovaj tjedan',
+      last_week: 'Prošli tjedan',
+      this_month: 'Ovaj mjesec',
+      last_month: 'Prošli mjesec',
+      custom_range_prefix: 'Prilagođeno:',
+      start: 'Početak',
+      end: 'Kraj',
+      apply_custom: 'Primijeni',
+      breakdown: 'Raspodjela',
+      total: 'Ukupno',
+      by_categories: 'po kategorijama',
+      by_names: 'po nazivima',
+      all_categories_excluded: 'Sve kategorije isključene',
+      all_names_excluded: 'Svi nazivi isključeni',
+      no_data_yet: 'Nema podataka',
+      no_data_to_visualize: 'Nema podataka za prikaz.',
+      timeline: 'Vremenska crta',
+      income_vs_expense_over_time: 'Prihod i trošak kroz vrijeme',
+      inspect: 'Pregled',
+      need_two_days: 'Potrebna su najmanje dva dana podataka za trend.',
+
+      toggle_timeline_view_aria: 'Prebaci prikaz na vremensku crtu',
+      graph_type_aria: 'Tip grafa',
+      group_by_aria: 'Grupiraj po',
+      categories: 'Kategorije',
+      names: 'Nazivi',
+
+      budget_mode: 'Budžet',
+      off_season: 'Izvan sezone',
+      season_active: 'Sezona aktivna',
+
+      no_season_set: 'Sezona nije postavljena.',
+      season_active_sentence: 'Sezona je aktivna.',
+      off_season_mode: 'Izvan sezone.',
+      days_to_start_season_one: '1 dan do početka radne sezone.',
+      days_to_start_season_many: '{days} dana do početka radne sezone.',
+      allowance_dwm: 'Dopušteno (D/T/M): {d} / {w} / {m}',
+
+      help_support: 'Pomoć i podrška',
+      general: 'Općenito',
+      general_subtitle: 'Odaberite kako se datumi prikazuju i kako dodajete stavke.',
+      date_format: 'Format datuma',
+      currency_symbol: 'Simbol valute',
+      language: 'Jezik',
+      changes_text_immediately: 'Odmah mijenja tekst aplikacije.',
+      home_input_buttons: 'Gumbi za unos',
+      single_button_mode: 'Način s jednim gumbom',
+      tap_for_expense_hold_for_income: 'Dodir za trošak, pritisni i drži 1 s za prihod.',
+      applies_to_recent_and_history: 'Primjenjuje se na nedavne stavke i povijest.',
+      shown_after_amounts: 'Prikazuje se nakon iznosa (npr. €, $, Kč).',
+
+      seasonal_budget: 'Sezonski budžet',
+      seasonal_budget_subtitle: 'Uključite sezonski način ili koristite jednostavno praćenje budžeta.',
+      seasonal_budget_mode: 'Sezonski budžet',
+      seasonal_budget_preview: 'Kad je isključeno, nadzorna ploča prikazuje Danas/Ovaj tjedan/Ovaj mjesec prihode i troškove.',
+
+      history_lock: 'Zaključavanje povijesti',
+      history_lock_subtitle: 'Spriječite slučajna brisanja swipe-om.',
+      lock_swipe_to_delete: 'Zaključaj brisanje swipe-om',
+      lock_swipe_preview: 'Još uvijek možete uređivati stavke pomoću ikone olovke.',
+
+      data_export_import: 'Izvoz i uvoz podataka',
+      data_export_import_subtitle: 'Napravite sigurnosnu kopiju i prenesite na drugi uređaj.',
+      share_backup: 'Podijeli kopiju',
+      share_backup_preview: 'Koristi OS dijeljenje kad je dostupno.',
+      import_backup: 'Uvezi kopiju',
+      import_backup_preview: 'Odaberite spremljenu .json datoteku za vraćanje.',
+
+      advanced: 'Napredno',
+      advanced_subtitle: 'Resetirajte aplikaciju ako želite krenuti ispočetka.',
+      clear_all_data: 'Obriši sve podatke',
+      clear_all_preview: 'Briše sve transakcije i resetira postavke. Prikazat će se potvrda.',
+
+      share_sheet_not_available: 'Dijeljenje nije dostupno. Sigurnosna kopija je preuzeta.',
+      unable_export_backup: 'Trenutno nije moguće izvesti sigurnosnu kopiju. Pokušaj ponovno.',
+      import_replace_confirm: 'Uvoz će zamijeniti postojeće podatke. Nastaviti?',
+      backup_imported_success: 'Sigurnosna kopija je uspješno uvezena.',
+      backup_import_failed: 'Nije moguće uvesti ovu datoteku. Provjeri je li izvezena iz FollowTheMoney.',
+      unable_read_file: 'Nije moguće pročitati odabranu datoteku.',
+      clear_all_confirm: 'Obrisati sve podatke? Ovo će izbrisati sve transakcije i resetirati postavke. Ovo se ne može poništiti.',
+      delete_transaction_confirm: 'Obrisati ovu transakciju?',
+      amount_move_exceeds: 'Iznos za premještanje ne može biti veći od iznosa transakcije.',
+      invalid_amount: 'Neispravan iznos.',
+      transfer_failed: 'Trenutno nije moguće premjestiti dio iznosa.',
+
+      amount_entry_aria: 'Unos iznosa',
+      select_or_type_category: 'Odaberi ili upiši kategoriju',
+
+      transaction_date_time: 'Datum i vrijeme transakcije',
+      adjust_backdate_hint: 'Podesite ovo pri uređivanju kako biste unijeli stariji datum.',
+      repeat_this_transaction: 'Ponavljaj ovu transakciju',
+      frequency: 'Učestalost',
+      yearly: 'Godišnje',
+
+      start_of_working_season: 'Početak radne sezone',
+      end_of_working_season: 'Kraj radne sezone',
+      save_season_dates: 'Spremi datume sezone'
+      ,
+      summary_total_balance: 'Ukupno stanje',
+      summary_entries: 'Stavke',
+      summary_average_amount: 'Prosječan iznos',
+      summary_preview_transactions_aria: 'Pregled transakcija',
+      summary_preview: 'Pregled',
+      summary_hint: 'Povuci ulijevo po stavci kako bi uključio/isključio u prosjek.',
+
+      income_only: 'Samo prihodi',
+      expenses_only: 'Samo troškovi',
+      filter_category_prefix: 'Kategorija:',
+      filter_name_prefix: 'Naziv:',
+      filter_excluded_prefix: 'Isključeno:'
+    }
+  };
+
+  const LOCALE_FILES = {
+    en: './locales/en.json',
+    hr: './locales/hr.json'
+  };
+  const _localeLoadState = { en: null, hr: null };
+
+  function mergeLocale(lang, dict){
+    if(!dict || typeof dict !== 'object') return;
+    if(!I18N[lang]) I18N[lang] = {};
+    I18N[lang] = { ...I18N[lang], ...dict };
+  }
+
+  function ensureLocaleLoaded(lang){
+    const normalized = String(lang || 'en').toLowerCase() === 'hr' ? 'hr' : 'en';
+    if(_localeLoadState[normalized] === true) return Promise.resolve(true);
+    if(_localeLoadState[normalized] && typeof _localeLoadState[normalized].then === 'function') return _localeLoadState[normalized];
+    const url = LOCALE_FILES[normalized];
+    if(!url){ _localeLoadState[normalized] = true; return Promise.resolve(true); }
+    _localeLoadState[normalized] = fetch(url)
+      .then(res=>{
+        if(!res.ok) throw new Error(`Locale load failed: ${normalized} (${res.status})`);
+        return res.json();
+      })
+      .then(json=>{
+        mergeLocale(normalized, json);
+        _localeLoadState[normalized] = true;
+        return true;
+      })
+      .catch(err=>{
+        console.warn('[ftm] locale load failed', normalized, err);
+        _localeLoadState[normalized] = false;
+        return false;
+      });
+    return _localeLoadState[normalized];
+  }
+
+  function getLang(){
+    const raw = settings && settings.language ? String(settings.language).toLowerCase() : 'en';
+    return raw === 'hr' ? 'hr' : 'en';
+  }
+  function t(key){
+    const lang = getLang();
+    return (I18N[lang] && I18N[lang][key]) || (I18N.en && I18N.en[key]) || key;
+  }
+
+  function tFmt(key, vars){
+    let str = t(key);
+    if(!vars) return str;
+    Object.keys(vars).forEach(k=>{
+      const token = `{${k}}`;
+      str = String(str).split(token).join(String(vars[k]));
+    });
+    return str;
+  }
+  function getNumberLocale(){
+    return getLang() === 'hr' ? 'hr-HR' : 'en-US';
+  }
+
+  let _helpContentEnHTML = null;
+  let _helpLangApplied = null;
+  function applyLanguageToHelp(){
+    const helpContent = document.querySelector('#helpModal .help-content');
+    if(!helpContent) return;
+    if(_helpContentEnHTML == null) _helpContentEnHTML = helpContent.innerHTML;
+    const lang = getLang();
+    if(_helpLangApplied === lang) return;
+    if(getLang() !== 'hr'){
+      helpContent.innerHTML = _helpContentEnHTML;
+      _helpLangApplied = lang;
+      return;
+    }
+    helpContent.innerHTML = `
+      <section>
+        <h3>Dobrodošli u FollowTheMoney</h3>
+        <p>FollowTheMoney je aplikacija za praćenje novca koja stavlja privatnost na prvo mjesto — jednostavna i pregledna. Pratite prihode i troškove, istražite uvide kroz grafove i birajte između Budžet načina (svakodnevno praćenje) ili Sezonskog budžeta (planiranje izvan sezone). Svi podaci ostaju na vašem uređaju — bez clouda i bez praćenja.</p>
+      </section>
+
+      <section>
+        <h3>Brzi početak</h3>
+        <ol>
+          <li>Na početnom zaslonu dodirnite <strong>zeleni krug</strong> (Prihod) ili <strong>crveni krug</strong> (Trošak).</li>
+          <li>Želite samo jednu tipku? Uključite <em>Način s jednim gumbom</em> u Postavke → Općenito. Dodir je trošak, a <em>pritisni i drži ~1 s</em> — gumb će iz crvenog preći u zeleni kao potvrdu — zatim otpusti za prihod.</li>
+          <li>Unesite iznos pomoću numeričke tipkovnice (sprema se kao centi, dvije decimale).</li>
+          <li>Odaberite ili upišite <strong>Kategoriju</strong> (obavezno) i <strong>Naziv</strong> (preporučeno).</li>
+          <li>Po želji dodirnite “Dodaj bilješku” za dodatni kontekst.</li>
+          <li>Dodirnite <strong>Dodaj</strong> za spremanje transakcije.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h3>Nedavne promjene i savjeti</h3>
+        <ul>
+          <li><strong>Premjesti dio iznosa:</strong> U uređivanju transakcije koristite “Premjesti dio iznosa u...” za razdvajanje miješanih kupnji. Odaberite iznos, kategoriju i naziv; stvara se nova transakcija za premješteni dio, a original se umanjuje (ili briše ako ostane 0).</li>
+          <li><strong>Unos iznosa:</strong> Premještanje koristi isti unos kao i glavna forma — dodirnite veliki iznos, upisujte znamenke, Backspace briše znamenku; sve se sprema kao centi.</li>
+          <li><strong>Prijedlozi:</strong> Kategorije i nazivi koriste prijedloge kroz “chip” gumbe (bez velikog iOS pickera). Počnite tipkati za filtriranje; dodir na prijedlog čisti pretragu i prikazuje povezane nazive.</li>
+          <li><strong>Uvidi — Vremenski raspon:</strong> Donut i vremenska crta imaju kontrolu raspona (Ovaj tjedan, Prošli tjedan, Ovaj mjesec, Prošli mjesec) i prilagođeni raspon.</li>
+          <li><strong>Sredina donuta:</strong> Overlay u sredini je postojan, bolje je prilagođen rupi i sakriva se kad je ukupno 0 kako bi se vidjela poruka o nedostatku podataka.</li>
+          <li><strong>Definicija tjedna:</strong> “Ovaj tjedan” koristi kalendarski tjedan (ponedjeljak → nedjelja) kako bi se brojke poklapale između Početne i Povijesti.</li>
+          <li><strong>iPhone safe-area:</strong> Gornja traka poštuje safe-area kako se ne bi preklapala sa status barom.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>Početni zaslon</h3>
+        <p><strong>Stanje:</strong> Prikazuje ukupno (prihodi minus troškovi).</p>
+        <p><strong>Oznaka:</strong> Prikazuje “Budžet” po zadanim postavkama ili “Izvan sezone” / “Sezona aktivna” kad je uključen Sezonski budžet.</p>
+        <p><strong>Gumbi za unos:</strong> Zadano su dva kruga (zeleni za prihod, crveni za trošak). U načinu s jednim gumbom ostaje samo crveni — dodir za trošak, pritisni i drži 1 s za prihod.</p>
+      </section>
+
+      <section>
+        <h3>Povijest</h3>
+        <p><strong>Filter tipa:</strong> Prihod / Sve / Trošak.</p>
+        <p><strong>Chip filteri:</strong> Filtrirajte po kategoriji ili nazivu.</p>
+        <p><strong>Uređivanje:</strong> Dodirnite olovku za uređivanje; brisanje swipe-om je onemogućeno kad je uključen “Zaključaj brisanje” u Postavkama.</p>
+      </section>
+
+      <section>
+        <h3>Uvidi</h3>
+        <p><strong>Najbolje u landscape načinu.</strong> Donut prikazuje raspodjelu po kategorijama ili nazivima. Dugim pritiskom (~3 s) na stavku možete isključiti/uključiti iz prikaza; isključene stavke idu na dno popisa.</p>
+      </section>
+
+      <section>
+        <h3>Postavke</h3>
+        <p>Ovdje birate format datuma, simbol valute, jezik, tipke za unos, sezonski budžet, zaključavanje brisanja i sigurnosne kopije.</p>
+      </section>
+
+      <section>
+        <h3>Privatnost</h3>
+        <p>Svi podaci su lokalno u IndexedDB/localStorage. Ništa se ne šalje na servere.</p>
+      </section>
+    `;
+    _helpLangApplied = lang;
+  }
+
+  function applyLanguageToStaticDom(){
+    const lang = getLang();
+    try{ document.documentElement.lang = lang; }catch(_){ }
+
+    const btnHistory = $('#btnHistory');
+    if(btnHistory){ btnHistory.textContent = t('nav_history'); btnHistory.setAttribute('aria-label', t('nav_history')); }
+    const btnSettings = $('#btnSettings');
+    if(btnSettings){ btnSettings.setAttribute('aria-label', t('nav_settings')); }
+    const btnHome = $('#btnHome');
+    if(btnHome){ btnHome.textContent = t('nav_home'); btnHome.setAttribute('aria-label', t('nav_home')); }
+    const btnSummaryBack = $('#btnSummaryBack');
+    if(btnSummaryBack){ btnSummaryBack.textContent = t('nav_back'); }
+
+    const historyLogo = document.querySelector('#screen-history .logo');
+    if(historyLogo) historyLogo.textContent = t('nav_history');
+    const summaryLogo = document.querySelector('#screen-summary .logo');
+    if(summaryLogo) summaryLogo.textContent = t('nav_summary');
+    const graphTitle = document.querySelector('.graph-title');
+    if(graphTitle) graphTitle.textContent = t('nav_insights');
+
+    const balanceLabelEl = document.querySelector('.balance-label');
+    if(balanceLabelEl){
+      const nodes = Array.from(balanceLabelEl.childNodes);
+      const textNode = nodes.find(n=> n.nodeType === Node.TEXT_NODE);
+      if(textNode) textNode.textContent = t('balance') + ' ';
+    }
+    const recentListEl = $('#recentList');
+    if(recentListEl) recentListEl.setAttribute('aria-label', t('recent_aria'));
+    const btnAddIncome = $('#btnAddIncome');
+    if(btnAddIncome) btnAddIncome.setAttribute('aria-label', t('add_income_aria'));
+    const btnAddExpense = $('#btnAddExpense');
+    if(btnAddExpense) btnAddExpense.setAttribute('aria-label', t('add_expense_aria'));
+
+    const historyTypeFiltersEl = $('#historyTypeFilters');
+    if(historyTypeFiltersEl){
+      historyTypeFiltersEl.querySelectorAll('.type-pill').forEach(btn=>{
+        const type = btn.dataset.type;
+        if(type === 'income') btn.textContent = t('income');
+        else if(type === 'expense') btn.textContent = t('expense');
+        else btn.textContent = t('all');
+      });
+    }
+    const historyChipSearchInput = $('#historyChipSearch');
+    if(historyChipSearchInput) historyChipSearchInput.placeholder = t('search_categories_or_names');
+
+    const historyChipSearchWrap = document.querySelector('.history-chip-search');
+    if(historyChipSearchWrap) historyChipSearchWrap.setAttribute('aria-label', t('search_filters'));
+    const categoryChipRow = $('#categoryChipRow');
+    if(categoryChipRow) categoryChipRow.setAttribute('aria-label', t('categories'));
+    const nameChipRow = $('#nameChipRow');
+    if(nameChipRow) nameChipRow.setAttribute('aria-label', t('names'));
+
+    // Graph range menu and labels
+    const graphRangeClearBtn = $('#graphRangeClear');
+    if(graphRangeClearBtn) graphRangeClearBtn.textContent = t('all_time');
+    const graphRangeApplyBtn = $('#graphRangeApply');
+    if(graphRangeApplyBtn) graphRangeApplyBtn.textContent = t('apply_custom');
+    const startLbl = document.querySelector('label[for="graphRangeStart"]');
+    if(startLbl) startLbl.textContent = t('start');
+    const endLbl = document.querySelector('label[for="graphRangeEnd"]');
+    if(endLbl) endLbl.textContent = t('end');
+    const graphRangeMenu = $('#graphRangeMenu');
+    if(graphRangeMenu){
+      graphRangeMenu.querySelectorAll('button[data-range]').forEach(btn=>{
+        const r = btn.dataset.range;
+        if(r === 'this_week') btn.textContent = t('this_week');
+        else if(r === 'last_week') btn.textContent = t('last_week');
+        else if(r === 'this_month') btn.textContent = t('this_month');
+        else if(r === 'last_month') btn.textContent = t('last_month');
+      });
+    }
+    const breakdownH2 = document.querySelector('.graph-breakdown-header h2');
+    if(breakdownH2) breakdownH2.textContent = t('breakdown');
+    const totalLbl = document.querySelector('.graph-total-overlay .total-label');
+    if(totalLbl) totalLbl.textContent = t('total');
+    const graphEmptyEl = $('#graphEmpty');
+    if(graphEmptyEl) graphEmptyEl.textContent = t('no_data_to_visualize');
+    const timelineH2 = document.querySelector('.timeline-header h2');
+    if(timelineH2) timelineH2.textContent = t('timeline');
+    const timelineSubtitle = document.querySelector('.timeline-subtitle');
+    if(timelineSubtitle) timelineSubtitle.textContent = t('income_vs_expense_over_time');
+    const btnTimelineCursorToggle = $('#btnTimelineCursorToggle');
+    if(btnTimelineCursorToggle) btnTimelineCursorToggle.textContent = t('inspect');
+    const timelineEmptyEl = $('#timelineEmpty');
+    if(timelineEmptyEl) timelineEmptyEl.textContent = t('need_two_days');
+
+    const timelineLegendItems = document.querySelectorAll('.timeline-legend > span');
+    if(timelineLegendItems && timelineLegendItems.length >= 2){
+      const setLegendLabel = (container, label)=>{
+        const dot = container.querySelector('.dot');
+        container.textContent = '';
+        if(dot) container.appendChild(dot);
+        container.appendChild(document.createTextNode(' ' + label));
+      };
+      setLegendLabel(timelineLegendItems[0], t('income'));
+      setLegendLabel(timelineLegendItems[1], t('expense'));
+    }
+
+    // Ensure the graph range button label is localized even before any graph interaction.
+    try{ updateGraphRangeLabel(); }catch(_){ }
+
+    // Graph controls (Income/Expense + Group by)
+    const graphTypeFiltersEl = $('#graphTypeFilters');
+    if(graphTypeFiltersEl){
+      graphTypeFiltersEl.setAttribute('aria-label', t('graph_type_aria'));
+      graphTypeFiltersEl.querySelectorAll('button[data-graph-type]').forEach(btn=>{
+        const type = btn.dataset.graphType;
+        if(type === 'income') btn.textContent = t('income');
+        else if(type === 'expense') btn.textContent = t('expense');
+      });
+    }
+    const graphViewToggle = document.querySelector('.graph-view-toggle');
+    if(graphViewToggle) graphViewToggle.setAttribute('aria-label', t('group_by_aria'));
+    const graphGroupCat = document.querySelector('.graph-view-toggle input[value="category"] + span');
+    if(graphGroupCat) graphGroupCat.textContent = t('categories');
+    const graphGroupName = document.querySelector('.graph-view-toggle input[value="name"] + span');
+    if(graphGroupName) graphGroupName.textContent = t('names');
+    const btnGraphTimeline = $('#btnGraphTimeline');
+    if(btnGraphTimeline) btnGraphTimeline.setAttribute('aria-label', t('toggle_timeline_view_aria'));
+
+    // Summary static labels
+    const summaryTotalLabels = document.querySelectorAll('#screen-summary .summary-total span');
+    if(summaryTotalLabels && summaryTotalLabels.length >= 2){
+      summaryTotalLabels[0].textContent = t('summary_total_balance');
+      summaryTotalLabels[1].textContent = t('summary_entries');
+    }
+    const summaryAvgLabel = document.querySelector('#screen-summary .summary-metrics .metric span');
+    if(summaryAvgLabel) summaryAvgLabel.textContent = t('summary_average_amount');
+    const summaryListSection = document.querySelector('#screen-summary .summary-list');
+    if(summaryListSection) summaryListSection.setAttribute('aria-label', t('summary_preview_transactions_aria'));
+    const previewH2 = document.querySelector('#screen-summary .summary-list h2');
+    if(previewH2) previewH2.textContent = t('summary_preview');
+    const summaryHint = document.querySelector('#screen-summary .summary-hint');
+    if(summaryHint) summaryHint.textContent = t('summary_hint');
+
+    // Settings
+    const settingsTitle = document.querySelector('#settingsModal .settings-title h2');
+    if(settingsTitle) settingsTitle.textContent = t('nav_settings');
+    const helpBtn = $('#btnHelpManual');
+    if(helpBtn) helpBtn.textContent = t('help_support');
+    const closeSettingsBtn = document.querySelector('#settingsModal [data-dismiss].btn');
+    if(closeSettingsBtn) closeSettingsBtn.textContent = t('close');
+    const generalHeading = $('#generalHeading');
+    if(generalHeading) generalHeading.textContent = t('general');
+    const generalSubtitle = generalHeading ? generalHeading.parentElement.querySelector('.card-subtitle') : null;
+    if(generalSubtitle) generalSubtitle.textContent = t('general_subtitle');
+    const dateFormatLbl = document.querySelector('label[for="dateFormat"]');
+    if(dateFormatLbl) dateFormatLbl.textContent = t('date_format');
+    const dateFormatPreview = dateFormatLbl ? dateFormatLbl.parentElement.querySelector('.preview.small') : null;
+    if(dateFormatPreview) dateFormatPreview.textContent = t('applies_to_recent_and_history');
+    const currencyLbl = document.querySelector('label[for="currencySymbol"]');
+    if(currencyLbl) currencyLbl.textContent = t('currency_symbol');
+    const currencyPreview = currencyLbl ? currencyLbl.parentElement.querySelector('.preview.small') : null;
+    if(currencyPreview) currencyPreview.textContent = t('shown_after_amounts');
+    const langLbl = document.querySelector('label[for="languageSelect"]');
+    if(langLbl) langLbl.textContent = t('language');
+    const langPreview = langLbl ? langLbl.parentElement.querySelector('.preview.small') : null;
+    if(langPreview) langPreview.textContent = t('changes_text_immediately');
+    const homeInputLbl = document.querySelector('label[for="singleButtonModeToggle"].small-label');
+    if(homeInputLbl) homeInputLbl.textContent = t('home_input_buttons');
+
+    const getSwitchLabelSpan = (inputId)=>{
+      const input = document.getElementById(inputId);
+      const label = input ? input.closest('label.toggle-row') : null;
+      if(!label) return null;
+      const directChildSpans = Array.from(label.children).filter(el=>
+        el && el.tagName === 'SPAN' && !el.classList.contains('switch-ui')
+      );
+      return directChildSpans.length ? directChildSpans[directChildSpans.length - 1] : null;
+    };
+
+    const singleBtnText = getSwitchLabelSpan('singleButtonModeToggle');
+    if(singleBtnText) singleBtnText.textContent = t('single_button_mode');
+    const homeInputPreview = homeInputLbl ? homeInputLbl.parentElement.querySelector('.preview.small') : null;
+    if(homeInputPreview) homeInputPreview.textContent = t('tap_for_expense_hold_for_income');
+
+    const seasonHeading = $('#seasonHeading');
+    if(seasonHeading) seasonHeading.textContent = t('seasonal_budget');
+    const seasonSubtitle = seasonHeading ? seasonHeading.parentElement.querySelector('.card-subtitle') : null;
+    if(seasonSubtitle) seasonSubtitle.textContent = t('seasonal_budget_subtitle');
+    const seasonalModeToggleLabel = getSwitchLabelSpan('seasonalModeToggle');
+    if(seasonalModeToggleLabel) seasonalModeToggleLabel.textContent = t('seasonal_budget_mode');
+    const seasonalPreview = document.querySelector('#seasonHeading') ? document.querySelector('#seasonHeading').closest('section').querySelector('.preview.small') : null;
+    if(seasonalPreview) seasonalPreview.textContent = t('seasonal_budget_preview');
+
+    const seasonStartLbl = document.querySelector('label[for="seasonStart"]');
+    if(seasonStartLbl) seasonStartLbl.textContent = t('start_of_working_season');
+    const seasonEndLbl = document.querySelector('label[for="seasonEnd"]');
+    if(seasonEndLbl) seasonEndLbl.textContent = t('end_of_working_season');
+    const saveSeasonBtn = $('#saveSeason');
+    if(saveSeasonBtn) saveSeasonBtn.textContent = t('save_season_dates');
+
+    const privacyHeading = $('#privacyHeading');
+    if(privacyHeading) privacyHeading.textContent = t('history_lock');
+    const privacySubtitle = privacyHeading ? privacyHeading.parentElement.querySelector('.card-subtitle') : null;
+    if(privacySubtitle) privacySubtitle.textContent = t('history_lock_subtitle');
+    const historyLockLabel = getSwitchLabelSpan('historyLockToggle');
+    if(historyLockLabel) historyLockLabel.textContent = t('lock_swipe_to_delete');
+    const historyLockPreview = document.querySelector('#privacyHeading') ? document.querySelector('#privacyHeading').closest('section').querySelector('.preview.small') : null;
+    if(historyLockPreview) historyLockPreview.textContent = t('lock_swipe_preview');
+
+    const dataHeading = $('#dataHeading');
+    if(dataHeading) dataHeading.textContent = t('data_export_import');
+    const dataSubtitle = dataHeading ? dataHeading.parentElement.querySelector('.card-subtitle') : null;
+    if(dataSubtitle) dataSubtitle.textContent = t('data_export_import_subtitle');
+    const btnExportShare = $('#btnExportShare');
+    if(btnExportShare) btnExportShare.textContent = t('share_backup');
+    const exportPreview = btnExportShare ? btnExportShare.parentElement.querySelector('.preview.small') : null;
+    if(exportPreview) exportPreview.textContent = t('share_backup_preview');
+    const btnImportData = $('#btnImportData');
+    if(btnImportData) btnImportData.textContent = t('import_backup');
+    const importPreview = btnImportData ? btnImportData.parentElement.querySelector('.preview.small') : null;
+    if(importPreview) importPreview.textContent = t('import_backup_preview');
+
+    const advancedHeading = $('#advancedHeading');
+    if(advancedHeading) advancedHeading.textContent = t('advanced');
+    const advancedSubtitle = advancedHeading ? advancedHeading.parentElement.querySelector('.card-subtitle') : null;
+    if(advancedSubtitle) advancedSubtitle.textContent = t('advanced_subtitle');
+    const btnClearAll = $('#btnClearAll');
+    if(btnClearAll) btnClearAll.textContent = t('clear_all_data');
+    const clearPreview = btnClearAll ? btnClearAll.parentElement.querySelector('.preview.small') : null;
+    if(clearPreview) clearPreview.textContent = t('clear_all_preview');
+
+    // Language select option labels
+    if(languageSelectEl){
+      const optEn = languageSelectEl.querySelector('option[value="en"]');
+      const optHr = languageSelectEl.querySelector('option[value="hr"]');
+      if(optEn) optEn.textContent = (lang === 'hr') ? 'Engleski' : 'English';
+      if(optHr) optHr.textContent = (lang === 'hr') ? 'Hrvatski' : 'Croatian';
+    }
+
+    // Sheet
+    const toggleNote = $('#toggleNote');
+    if(toggleNote) toggleNote.textContent = t('add_note');
+    const noteInput = $('#noteInput');
+    if(noteInput) noteInput.placeholder = t('note_optional');
+
+    const sheetPanel = document.querySelector('#sheet .sheet-panel');
+    if(sheetPanel) sheetPanel.setAttribute('aria-label', t('amount_entry_aria'));
+
+    const catLbl = document.querySelector('label[for="categoryInput"]');
+    if(catLbl) catLbl.textContent = t('category');
+    const categoryInput = $('#categoryInput');
+    if(categoryInput) categoryInput.placeholder = t('select_or_type_category');
+
+    const nameLbl = document.querySelector('label[for="nameInput"]');
+    if(nameLbl) nameLbl.textContent = t('name');
+    const nameInput = $('#nameInput');
+    if(nameInput) nameInput.placeholder = t('name');
+    const btnMovePart = $('#btnMovePart');
+    if(btnMovePart) btnMovePart.textContent = t('move_part_btn');
+    const mpTitle = document.querySelector('#movePartContainer .move-part-header h3');
+    if(mpTitle) mpTitle.textContent = t('move_part_title');
+    const mpSub = document.querySelector('#movePartContainer .move-part-header p');
+    if(mpSub) mpSub.textContent = t('move_part_subtitle');
+    const mpAmtLbl = document.querySelector('#movePartContainer .setting-row label.small-label');
+    if(mpAmtLbl) mpAmtLbl.textContent = t('amount_to_move');
+    const mpHint = document.querySelector('#movePartContainer .setting-row .preview.small');
+    if(mpHint) mpHint.textContent = t('tap_amount_to_edit');
+    const mpCatLbl = document.querySelector('label[for="movePartCategory"]');
+    if(mpCatLbl) mpCatLbl.textContent = t('category');
+    const mpNameLbl = document.querySelector('label[for="movePartName"]');
+    if(mpNameLbl) mpNameLbl.textContent = t('name');
+    const mpCatInput = $('#movePartCategory');
+    if(mpCatInput) mpCatInput.placeholder = t('select_or_type_category');
+    const mpNameInput = $('#movePartName');
+    if(mpNameInput) mpNameInput.placeholder = t('name');
+    const movePartConfirmBtn = $('#movePartConfirm');
+    if(movePartConfirmBtn) movePartConfirmBtn.textContent = t('confirm_transfer');
+    const movePartBackBtn = $('#movePartBack');
+    if(movePartBackBtn) movePartBackBtn.textContent = t('back');
+
+    // Edit-only fields in sheet
+    const editDateLbl = document.querySelector('label[for="editDateInput"]');
+    if(editDateLbl) editDateLbl.textContent = t('transaction_date_time');
+    const editDateHint = editDateLbl ? editDateLbl.parentElement.querySelector('.preview.small') : null;
+    if(editDateHint) editDateHint.textContent = t('adjust_backdate_hint');
+
+    const recurringText = document.querySelector('#recurringContainer .recurring-toggle-label span');
+    if(recurringText) recurringText.textContent = t('repeat_this_transaction');
+    const frequencyLbl = document.querySelector('label[for="frequencySelect"]');
+    if(frequencyLbl) frequencyLbl.textContent = t('frequency');
+    const frequencySelect = $('#frequencySelect');
+    if(frequencySelect){
+      const optWeekly = frequencySelect.querySelector('option[value="weekly"]');
+      const optMonthly = frequencySelect.querySelector('option[value="monthly"]');
+      const optYearly = frequencySelect.querySelector('option[value="yearly"]');
+      if(optWeekly) optWeekly.textContent = t('weekly');
+      if(optMonthly) optMonthly.textContent = t('monthly');
+      if(optYearly) optYearly.textContent = t('yearly');
+    }
+
+    // Help modal
+    const helpTitle = document.querySelector('#helpModal .settings-title h2');
+    if(helpTitle) helpTitle.textContent = (lang === 'hr') ? 'Upute' : 'User Manual';
+    const helpCloseBtn = document.querySelector('#helpModal [data-dismiss].btn');
+    if(helpCloseBtn) helpCloseBtn.textContent = t('close');
+  }
+
+  function setLanguage(nextLang, persist=true){
+    const lang = String(nextLang || 'en').toLowerCase() === 'hr' ? 'hr' : 'en';
+    settings.language = lang;
+    if(languageSelectEl) languageSelectEl.value = lang;
+    applyLanguageToStaticDom();
+    applyLanguageToHelp();
+    // re-render dynamic strings
+    updateSeasonalStats();
+    updateBalance();
+    renderRecent();
+    if(!historyScreen.hidden) renderHistory();
+    if(!summaryScreen.hidden) renderSummary();
+    refreshGraphIfVisible();
+    ensureLocaleLoaded(lang).then(loaded=>{
+      if(!loaded) return;
+      if(getLang() !== lang) return;
+      applyLanguageToStaticDom();
+      applyLanguageToHelp();
+      updateSeasonalStats();
+      updateBalance();
+      renderRecent();
+      if(!historyScreen.hidden) renderHistory();
+      if(!summaryScreen.hidden) renderSummary();
+      refreshGraphIfVisible();
+    });
+    if(persist) dbSaveSettings(settings);
+  }
+
+  // best-effort preload (SW will cache these too)
+  try{ ensureLocaleLoaded('en'); ensureLocaleLoaded('hr'); }catch(_){ }
+
   // Helpers
   const monthKey = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   const generateId = ()=>{
@@ -524,7 +1360,7 @@
   };
   const formatCurrency = cents => {
     const value = cents/100;
-    const formatted = value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const formatted = value.toLocaleString(getNumberLocale(),{minimumFractionDigits:2,maximumFractionDigits:2});
     const symbol = (settings && settings.currencySymbol) ? settings.currencySymbol : '€';
     return formatted + '\u202F' + symbol;
   };
@@ -738,24 +1574,31 @@
     const lastMonthEnd = endOfDayTs(new Date(now.getFullYear(), now.getMonth(), 0).getTime());
     switch(type){
       case 'this_week':
-        return { type:'preset', key:'this_week', label:'This week', start:thisWeekStart, end:thisWeekEnd };
+        return { type:'preset', key:'this_week', label:t('this_week'), start:thisWeekStart, end:thisWeekEnd };
       case 'last_week':
-        return { type:'preset', key:'last_week', label:'Last week', start:lastWeekStart, end:lastWeekEnd };
+        return { type:'preset', key:'last_week', label:t('last_week'), start:lastWeekStart, end:lastWeekEnd };
       case 'this_month':
-        return { type:'preset', key:'this_month', label:'This month', start:thisMonthStart, end:thisMonthEnd };
+        return { type:'preset', key:'this_month', label:t('this_month'), start:thisMonthStart, end:thisMonthEnd };
       case 'last_month':
-        return { type:'preset', key:'last_month', label:'Last month', start:lastMonthStart, end:lastMonthEnd };
+        return { type:'preset', key:'last_month', label:t('last_month'), start:lastMonthStart, end:lastMonthEnd };
       default:
-        return { type:'all', start:null, end:null, label:'All time' };
+        return { type:'all', start:null, end:null, label:t('all_time') };
     }
   }
   function formatGraphRangeLabel(range){
-    if(!range || range.type === 'all') return 'All time';
-    if(range.type === 'preset' && range.label) return range.label;
-    if(range.type === 'custom' && range.start && range.end){
-      return `Custom: ${formatShortDate(range.start)} - ${formatShortDate(range.end)}`;
+    if(!range || range.type === 'all') return t('all_time');
+    if(range.type === 'preset'){
+      const key = range.key;
+      if(key === 'this_week') return t('this_week');
+      if(key === 'last_week') return t('last_week');
+      if(key === 'this_month') return t('this_month');
+      if(key === 'last_month') return t('last_month');
+      if(range.label) return range.label;
     }
-    return 'All time';
+    if(range.type === 'custom' && range.start && range.end){
+      return `${t('custom_range_prefix')} ${formatShortDate(range.start)} - ${formatShortDate(range.end)}`;
+    }
+    return t('all_time');
   }
   function filterTransactionsByGraphRange(list){
     if(!graphDateRange || graphDateRange.type === 'all') return list;
@@ -766,7 +1609,7 @@
   function updateGraphRangeLabel(){
     if(!graphRangeBtn) return;
     const label = formatGraphRangeLabel(graphDateRange);
-    graphRangeBtn.textContent = `Time range: ${label}`;
+    graphRangeBtn.textContent = `${t('time_range_prefix')} ${label}`;
     graphRangeBtn.setAttribute('aria-expanded', graphRangeMenu && !graphRangeMenu.hidden ? 'true' : 'false');
   }
   function hideGraphRangeMenu(){
@@ -811,22 +1654,22 @@
     const filterPositive = currentType === 'income';
     const source = Array.isArray(txList) ? txList : filterTransactionsByGraphRange(transactions);
     const map = new Map();
-    source.forEach(t=>{
-      const isIncome = t.amountCents >= 0;
+    source.forEach(tx=>{
+      const isIncome = tx.amountCents >= 0;
       if(filterPositive && !isIncome) return;
       if(!filterPositive && isIncome) return;
-      const amount = Math.abs(t.amountCents);
+      const amount = Math.abs(tx.amountCents);
       if(amount <= 0) return;
 
       let label = '';
       let categoryLabel = null;
       if(graphGrouping === 'name'){
-        const nameRaw = (t.name && t.name.trim()) || 'Unnamed';
-        const categoryRaw = (t.category && t.category.trim()) || 'Uncategorized';
+        const nameRaw = (tx.name && tx.name.trim()) || t('unnamed');
+        const categoryRaw = (tx.category && tx.category.trim()) || t('uncategorized');
         label = `${categoryRaw} / ${nameRaw}`;
         categoryLabel = categoryRaw;
       } else {
-        label = (t.category && t.category.trim()) || 'Uncategorized';
+        label = (tx.category && tx.category.trim()) || t('uncategorized');
       }
 
       if(!map.has(label)){
@@ -888,7 +1731,7 @@
     const colorMap = assignSegmentColors(includedSegments.length ? includedSegments : segments);
     const total = includedSegments.reduce((sum,item)=> sum + item.value, 0);
     const hasSegments = segments.length > 0;
-    const groupingLabel = graphGrouping === 'name' ? 'by names' : 'by categories';
+    const groupingLabel = graphGrouping === 'name' ? t('by_names') : t('by_categories');
     const rangeLabel = formatGraphRangeLabel(graphDateRange);
     clearLegendHoldState();
     hideLegendPopup();
@@ -919,7 +1762,7 @@
       const excluded = isLegendLabelExcluded(segment.label);
       if(excluded){
         legendItem.classList.add('excluded');
-        pct.textContent = 'Excluded';
+        pct.textContent = t('excluded');
         pct.classList.add('legend-excluded-tag');
       } else {
         const percent = total>0 ? Math.round((segment.value/total)*1000)/10 : 0;
@@ -947,13 +1790,13 @@
     }
     if(graphTotalScopeEl){
       if(total>0){
-        const scopeParts = [`${graphType==='income'?'Income':'Expense'} · ${groupingLabel}`];
-        if(rangeLabel && rangeLabel !== 'All time') scopeParts.push(rangeLabel);
+        const scopeParts = [`${graphType==='income' ? t('income') : t('expense')} · ${groupingLabel}`];
+        if(graphDateRange && graphDateRange.type !== 'all' && rangeLabel) scopeParts.push(rangeLabel);
         graphTotalScopeEl.textContent = scopeParts.join(' · ');
       } else if(hasSegments){
-        graphTotalScopeEl.textContent = `All ${graphGrouping === 'name' ? 'names' : 'categories'} excluded`;
+        graphTotalScopeEl.textContent = graphGrouping === 'name' ? t('all_names_excluded') : t('all_categories_excluded');
       } else {
-        graphTotalScopeEl.textContent = 'No data yet';
+        graphTotalScopeEl.textContent = t('no_data_yet');
       }
     }
     if(total<=0){
@@ -1359,14 +2202,14 @@
     const filterPositive = type === 'income';
     const source = filterTransactionsByGraphRange(transactions);
     const map = new Map();
-    source.forEach(t=>{
-      const isIncome = t.amountCents >= 0;
+    source.forEach(tx=>{
+      const isIncome = tx.amountCents >= 0;
       if(filterPositive && !isIncome) return;
       if(!filterPositive && isIncome) return;
-      const amount = Math.abs(t.amountCents);
+      const amount = Math.abs(tx.amountCents);
       if(amount <= 0) return;
-      const categoryRaw = (t.category && t.category.trim()) || 'Uncategorized';
-      const nameRaw = (t.name && t.name.trim()) || 'Unnamed';
+      const categoryRaw = (tx.category && tx.category.trim()) || t('uncategorized');
+      const nameRaw = (tx.name && tx.name.trim()) || t('unnamed');
       const label = grouping === 'name' ? `${categoryRaw} / ${nameRaw}` : categoryRaw;
       const bucket = map.get(label) || { value: 0, categoryLabel: grouping === 'name' ? categoryRaw : null };
       bucket.value += amount;
@@ -1625,7 +2468,7 @@
     const clearChip = document.createElement('button');
     clearChip.type='button';
     clearChip.className='chip'+(!activeValue?' active':'');
-    clearChip.textContent = kind==='category'?'All categories':'All names';
+    clearChip.textContent = kind==='category' ? t('all_categories') : t('all_names');
     clearChip.dataset.value='';
     clearChip.dataset.kind=kind;
     clearChip.dataset.scope='history';
@@ -1699,6 +2542,7 @@
       seasonIncomeCents:0,
       dateFormat:'dmy',
       currencySymbol:'€',
+      language:'en',
       historyLocked:true,
       incomeCategories: [],
       expenseCategories: [],
@@ -1715,6 +2559,7 @@
     let symbolSource = raw && typeof raw.currencySymbol !== 'undefined' ? String(raw.currencySymbol) : (next.currencySymbol || '€');
     symbolSource = symbolSource.trim();
     next.currencySymbol = symbolSource ? symbolSource.slice(0,3) : '€';
+    next.language = String(next.language || 'en').toLowerCase() === 'hr' ? 'hr' : 'en';
     next.historyLocked = !!next.historyLocked;
     ['incomeCategories','expenseCategories','incomeNames','expenseNames'].forEach(key=>{
       if(!Array.isArray(next[key])) next[key] = [];
@@ -1774,14 +2619,14 @@
         });
       } else {
         downloadBlob(blob, BACKUP_FILENAME);
-        alert('Share sheet not available. Backup downloaded instead.');
+        alert(t('share_sheet_not_available'));
       }
     }catch(err){
       if(err && err.name === 'AbortError'){
         console.warn('Share dismissed by user');
       } else {
         console.error('Export/share error', err);
-        alert('Unable to export backup right now. Please try again.');
+        alert(t('unable_export_backup'));
       }
     }finally{
       btnExportShare.disabled = false;
@@ -1800,6 +2645,7 @@
     await dbSaveSettings(importedSettings);
     transactions = importedTxs.slice();
     settings = { ...importedSettings };
+    setLanguage(settings.language || 'en', false);
     normalizeCollections();
     updateBalance();
     renderRecent();
@@ -2003,7 +2849,7 @@
     recentListEl.innerHTML = '';
     const list = transactions.slice(0,5);
     if(list.length===0){
-      const e = document.createElement('div'); e.className='empty'; e.textContent='No recent entries'; recentListEl.appendChild(e); return;
+      const e = document.createElement('div'); e.className='empty'; e.textContent=t('no_recent_entries'); recentListEl.appendChild(e); return;
     }
     list.forEach(t=>{
       const row = document.createElement('div');
@@ -2051,7 +2897,7 @@
     else labelParts.push('All types');
     if(historyCategoryFilter) labelParts.push(historyCategoryFilter);
     if(historyNameFilter) labelParts.push(historyNameFilter);
-    labelSpan.textContent = labelParts.join(' · ') || 'All entries';
+    labelSpan.textContent = labelParts.join(' · ') || t('all_entries');
 
     const sumSpan = document.createElement('span');
     sumSpan.className = 'sum';
@@ -2170,8 +3016,8 @@
     }
     if(historyFilterEl){
       if(historyFilter){
-        const labels = {day:'Today',week:'This Week',month:'This Month'};
-        historyFilterEl.textContent = `Showing: ${labels[historyFilter] || 'All'}`;
+        const labels = {day:t('today'),week:t('this_week'),month:t('this_month')};
+        historyFilterEl.textContent = `${t('showing_prefix')} ${labels[historyFilter] || t('all')}`;
         historyFilterEl.hidden = false;
       } else {
         historyFilterEl.hidden = true;
@@ -2181,49 +3027,49 @@
     if(filteredTxs.length===0){
       const empty = document.createElement('div');
       empty.className='empty'; 
-      empty.textContent= historyFilter ? 'No transactions in this period.' : 'No transactions yet.';
+      empty.textContent= historyFilter ? t('no_transactions_in_period') : t('no_transactions_yet');
       historyList.appendChild(empty); 
       return;
     }
-    filteredTxs.forEach(t=>{
+    filteredTxs.forEach(tx=>{
       const wrap = document.createElement('div');
       wrap.className='transaction fade-in';
-      wrap.dataset.id = t.id;
+      wrap.dataset.id = tx.id;
 
       const info = document.createElement('div');
       info.className = 'left';
       info.style.minWidth='0';
       const title = document.createElement('div');
       title.className='title';
-      const displayName = buildEntryLabel(t);
+      const displayName = buildEntryLabel(tx);
       title.textContent = displayName;
       title.style.fontWeight='600';
       title.style.whiteSpace='nowrap';
       title.style.overflow='hidden';
       title.style.textOverflow='ellipsis';
       const meta = document.createElement('div');
-      const dateStr = formatDateTime(t.createdAt,true);
+      const dateStr = formatDateTime(tx.createdAt,true);
       meta.className='meta';
-      meta.textContent = dateStr + (t.recurring?' · Recurring':'');
+      meta.textContent = dateStr + (tx.recurring ? ` · ${t('recurring')}` : '');
       info.appendChild(title);
       info.appendChild(meta);
 
       const actions = document.createElement('div');
       actions.className='actions';
       const amt = document.createElement('div');
-      amt.className = t.amountCents>0?'amount-pos':'amount-neg';
-      amt.textContent = formatCurrency(Math.abs(t.amountCents));
+      amt.className = tx.amountCents>0?'amount-pos':'amount-neg';
+      amt.textContent = formatCurrency(Math.abs(tx.amountCents));
       const editBtn = document.createElement('button');
       editBtn.type='button';
       editBtn.className='edit-btn';
-      if(t.note){
+      if(tx.note){
         editBtn.classList.add('note-outline');
       }
-      editBtn.setAttribute('aria-label','Edit transaction');
+      editBtn.setAttribute('aria-label', t('edit_transaction_aria'));
       editBtn.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z'/></svg>";
       editBtn.addEventListener('click',e=>{
         e.stopPropagation();
-        startEditingTransaction(t);
+        startEditingTransaction(tx);
       });
 
       actions.appendChild(amt);
@@ -2256,7 +3102,7 @@
         const endSwipe = ()=>{
           if(!swiping){ startX=0; current=0; return; }
           if(current<-100){
-            const confirmed = confirm('Delete this transaction?');
+            const confirmed = confirm(t('delete_transaction_confirm'));
             if(confirmed){
               deleteTx(t.id);
             }
@@ -2301,17 +3147,17 @@
     const { label, totalCents, count, filters, transactions } = historySummaryState;
     const excludedIds = ensureSummaryExcludedSet();
     const { averageCents } = computeSummaryAverage(transactions, excludedIds);
-    if(summaryLabelEl) summaryLabelEl.textContent = label || 'All entries';
+    if(summaryLabelEl) summaryLabelEl.textContent = label || t('all_entries');
     if(summaryNetEl) summaryNetEl.textContent = formatCurrency(totalCents);
     if(summaryCountEl) summaryCountEl.textContent = String(count);
     if(summaryAverageEl) summaryAverageEl.textContent = formatCurrency(averageCents);
     if(summaryFiltersEl){
       const filterParts = [];
-      if(filters.type && filters.type !== 'all') filterParts.push(filters.type === 'income' ? 'Income only' : 'Expenses only');
-      if(filters.category) filterParts.push(`Category: ${filters.category}`);
-      if(filters.name) filterParts.push(`Name: ${filters.name}`);
-      if(excludedIds.size>0) filterParts.push(`Excluded: ${excludedIds.size}`);
-      summaryFiltersEl.textContent = filterParts.length ? filterParts.join(' · ') : 'No filters applied';
+      if(filters.type && filters.type !== 'all') filterParts.push(filters.type === 'income' ? t('income_only') : t('expenses_only'));
+      if(filters.category) filterParts.push(`${t('filter_category_prefix')} ${filters.category}`);
+      if(filters.name) filterParts.push(`${t('filter_name_prefix')} ${filters.name}`);
+      if(excludedIds.size>0) filterParts.push(`${t('filter_excluded_prefix')} ${excludedIds.size}`);
+      summaryFiltersEl.textContent = filterParts.length ? filterParts.join(' · ') : t('no_filters_applied');
     }
     if(summaryListEl){
       summaryListEl.innerHTML = '';
@@ -2340,7 +3186,7 @@
       if(transactions.length === 0){
         const empty = document.createElement('div');
         empty.className = 'empty';
-        empty.textContent = 'No transactions in this selection yet.';
+        empty.textContent = t('no_transactions_in_selection');
         summaryListEl.appendChild(empty);
       }
     }
@@ -2492,7 +3338,7 @@
     if(categoryContainer){
       categoryContainer.hidden=false;
       if(categoryInput){
-        categoryInput.placeholder = sheetType==='income' ? 'Income category' : 'Expense category';
+        categoryInput.placeholder = sheetType==='income' ? t('income_category_placeholder') : t('expense_category_placeholder');
         categoryInput.value = existingTx && existingTx.category ? existingTx.category : '';
       }
     }
@@ -2515,7 +3361,7 @@
       noteInput.value='';
       noteContainer.hidden=true; 
       toggleNoteBtn.hidden=false;
-      toggleNoteBtn.textContent='Add note';
+      toggleNoteBtn.textContent=t('add_note');
     }
     if(editDateContainer){
       if(sheetMode==='edit' && editingTransaction){
@@ -2545,11 +3391,11 @@
         if(frequencySelect) frequencySelect.value = 'monthly';
       }
     }
-    confirmBtn.textContent = sheetMode==='edit' ? 'Save Changes' : (type==='expense'?'Add Expense':'Add Income');
+    confirmBtn.textContent = sheetMode==='edit' ? t('save_changes') : (type==='expense' ? t('add_expense') : t('add_income'));
     // update visible type label below amount
     const sheetTypeLabel = document.getElementById('sheetTypeLabel');
     if(sheetTypeLabel){
-      sheetTypeLabel.textContent = type === 'expense' ? 'Expense' : 'Income';
+      sheetTypeLabel.textContent = type === 'expense' ? t('sheet_type_expense') : t('sheet_type_income');
       sheetTypeLabel.classList.remove('expense','income');
       sheetTypeLabel.classList.add(type === 'expense' ? 'expense' : 'income');
     }
@@ -2576,7 +3422,7 @@
     noteContainer.hidden=true;
     noteInput.value='';
     toggleNoteBtn.hidden=false;
-    toggleNoteBtn.textContent='Add note';
+    toggleNoteBtn.textContent=t('add_note');
     if(nameContainer) nameContainer.hidden=true;
     if(nameInput) nameInput.value='';
     if(nameSuggestionsEl){
@@ -2590,7 +3436,7 @@
     if(recurringFrequency) recurringFrequency.hidden = true;
     if(frequencySelect) frequencySelect.value = 'monthly';
     rawDigits.value='0';
-    confirmBtn.textContent='Add Income';
+    confirmBtn.textContent=t('add_income');
     sheetAmountEl.textContent = formatCurrency(0);
     confirmBtn.dataset.cents = '0';
     confirmBtn.disabled = true;
@@ -2626,6 +3472,7 @@
     if(themeToggleEl) themeToggleEl.checked = settings.theme === 'light';
     if(dateFormatEl) dateFormatEl.value = settings.dateFormat || 'dmy';
     if(currencySymbolInput) currencySymbolInput.value = settings.currencySymbol || '€';
+    if(languageSelectEl) languageSelectEl.value = settings.language || 'en';
     if(historyLockToggle) historyLockToggle.checked = !!settings.historyLocked;
     if(singleButtonModeToggle) singleButtonModeToggle.checked = !!settings.singleButtonMode;
     if(seasonalModeToggle) seasonalModeToggle.checked = !!settings.seasonalMode;
@@ -2761,15 +3608,14 @@
     const result = window.SeasonalLogic.computeAllowances(settings, transactions, Date.now());
     if(seasonInfoEl){
       if(!result.phase || !result.phase.hasSeason){
-        seasonInfoEl.textContent = 'No season set.';
+        seasonInfoEl.textContent = t('no_season_set');
       } else if(result.phase.isSeasonActive){
-        seasonInfoEl.textContent = 'Season active.';
+        seasonInfoEl.textContent = t('season_active_sentence');
       } else if(result.phase.isOffSeason){
-        let text = 'Off-season mode.';
+        let text = t('off_season_mode');
         if(typeof result.phase.daysUntilNextSeason === 'number'){
           const days = result.phase.daysUntilNextSeason;
-          const label = days === 1 ? '1 day' : `${days} days`;
-          text += ` ${label} to start of working season.`;
+          text += ' ' + (days === 1 ? t('days_to_start_season_one') : tFmt('days_to_start_season_many', { days }));
         }
         seasonInfoEl.textContent = text;
       } else {
@@ -2781,7 +3627,7 @@
         const d = formatCurrency(result.dailyAllowance || 0);
         const w = formatCurrency(result.weeklyAllowance || 0);
         const m = formatCurrency(result.monthlyAllowance || 0);
-        allowanceInfoEl.textContent = `Allowance (D/W/M): ${d} / ${w} / ${m}`;
+        allowanceInfoEl.textContent = tFmt('allowance_dwm', { d, w, m });
       } else {
         allowanceInfoEl.textContent = '';
       }
@@ -2793,9 +3639,9 @@
         // Seasonal mode: show allowances and spent
         const spent = window.SeasonalLogic.computeSpent(transactions, Date.now());
         if(result.phase && result.phase.hasSeason && result.phase.isOffSeason){
-          updateDashboardCard('day', 'Daily', formatCurrency(result.dailyAllowance || 0), formatCurrency(spent.dailySpent || 0));
-          updateDashboardCard('week', 'Weekly', formatCurrency(result.weeklyAllowance || 0), formatCurrency(spent.weeklySpent || 0));
-          updateDashboardCard('month', 'Monthly', formatCurrency(result.monthlyAllowance || 0), formatCurrency(spent.monthlySpent || 0));
+          updateDashboardCard('day', t('daily'), formatCurrency(result.dailyAllowance || 0), formatCurrency(spent.dailySpent || 0));
+          updateDashboardCard('week', t('weekly'), formatCurrency(result.weeklyAllowance || 0), formatCurrency(spent.weeklySpent || 0));
+          updateDashboardCard('month', t('monthly'), formatCurrency(result.monthlyAllowance || 0), formatCurrency(spent.monthlySpent || 0));
           dashboardGridEl.hidden = false;
         } else {
           dashboardGridEl.hidden = true;
@@ -2803,22 +3649,22 @@
       } else {
         // Budget mode: show Today/This Week/This Month income & expenses
         const budget = computeBudgetStats(transactions, Date.now());
-        updateDashboardCardBudgetMode('day', 'Today', budget.today);
-        updateDashboardCardBudgetMode('week', 'This Week', budget.week);
-        updateDashboardCardBudgetMode('month', 'This Month', budget.month);
+        updateDashboardCardBudgetMode('day', t('today'), budget.today);
+        updateDashboardCardBudgetMode('week', t('this_week'), budget.week);
+        updateDashboardCardBudgetMode('month', t('this_month'), budget.month);
         dashboardGridEl.hidden = false;
       }
     }
 
     if(seasonBadgeEl){
       if(!settings.seasonalMode){
-        seasonBadgeEl.textContent = 'Budget mode';
+        seasonBadgeEl.textContent = t('budget_mode');
         seasonBadgeEl.hidden = false;
       } else if(settings.seasonalMode && result.phase && result.phase.isOffSeason){
-        seasonBadgeEl.textContent = 'Off-season';
+        seasonBadgeEl.textContent = t('off_season');
         seasonBadgeEl.hidden = false;
       } else if(settings.seasonalMode && result.phase && result.phase.isSeasonActive){
-        seasonBadgeEl.textContent = 'Season active';
+        seasonBadgeEl.textContent = t('season_active');
         seasonBadgeEl.hidden = false;
       } else {
         seasonBadgeEl.hidden = true;
@@ -3127,14 +3973,14 @@
 
     const sourceAbs = Math.abs(editingTransaction.amountCents);
     if(moveCents > sourceAbs){
-      alert('Amount to move cannot exceed the transaction amount.');
+      alert(t('amount_move_exceeds'));
       return;
     }
 
     // Prevent creating a negative remainder. If equal, we delete the source tx.
     const remainderAbs = sourceAbs - moveCents;
     if(remainderAbs < 0){
-      alert('Invalid amount.');
+      alert(t('invalid_amount'));
       return;
     }
 
@@ -3192,7 +4038,7 @@
       closeMovePartOverlay();
     }catch(err){
       console.error('Move-part transfer failed', err);
-      alert('Unable to transfer part of the amount right now.');
+      alert(t('transfer_failed'));
       movePartConfirmBtn.disabled = false;
     }
   }
@@ -3410,7 +4256,7 @@
     hideGraphRangeMenu();
   });
   if(graphRangeMenu){ graphRangeMenu.hidden = true; graphRangeMenu.style.display = 'none'; }
-  if(graphRangeBtn){ graphRangeBtn.textContent = 'Time range: All time'; graphRangeBtn.setAttribute('aria-expanded','false'); }
+  if(graphRangeBtn){ graphRangeBtn.textContent = `${t('time_range_prefix')} ${t('all_time')}`; graphRangeBtn.setAttribute('aria-expanded','false'); }
   if(graphLegendEl){
     graphLegendEl.addEventListener('scroll', updateGraphLegendScrollIndicators);
   }
@@ -3523,6 +4369,12 @@
     currencySymbolInput.addEventListener('blur', commitCurrencySymbol);
     currencySymbolInput.addEventListener('change', commitCurrencySymbol);
   }
+
+  if(languageSelectEl){
+    languageSelectEl.addEventListener('change', ()=>{
+      setLanguage(languageSelectEl.value, true);
+    });
+  }
   if(historyLockToggle){
     historyLockToggle.addEventListener('change',()=>{
       settings.historyLocked = historyLockToggle.checked;
@@ -3548,13 +4400,13 @@
         try{
           const text = typeof reader.result === 'string' ? reader.result : '';
           const { importedTxs, importedSettings } = parseBackupText(text);
-          const proceed = confirm('Importing will replace current data. Continue?');
+          const proceed = confirm(t('import_replace_confirm'));
           if(!proceed) return;
           await applyImportedData(importedTxs, importedSettings);
-          alert('Backup imported successfully.');
+          alert(t('backup_imported_success'));
         }catch(err){
           console.error('Import error', err);
-          alert('Could not import this backup file. Please make sure it was exported from FollowTheMoney.');
+          alert(t('backup_import_failed'));
         } finally {
           btnImportData.disabled = false;
           importFileInput.value='';
@@ -3563,7 +4415,7 @@
       reader.onerror = ()=>{
         btnImportData.disabled = false;
         importFileInput.value='';
-        alert('Unable to read the selected file.');
+        alert(t('unable_read_file'));
       };
       reader.readAsText(file);
     });
@@ -3601,7 +4453,7 @@
   });
 
   btnClearAll.addEventListener('click',()=>{
-    const confirmed = confirm('Clear all data? This will delete all transactions and reset settings. This cannot be undone.');
+    const confirmed = confirm(t('clear_all_confirm'));
     if(!confirmed) return;
     const delPromises = transactions.map(t=>dbDeleteTransaction(t.id));
     Promise.all(delPromises).then(()=>{
@@ -3662,7 +4514,16 @@
 
   // Init
   openDB().then(d=>{ db=d; return Promise.all([dbGetAllTransactions(), dbGetSettings()]); })
-    .then(([txs,s])=>{ transactions=txs; settings={...settings,...s}; updateBalance(); applyRecurringIfNeeded(); syncSettingsUI(); updateSeasonalStats(); refreshGraphIfVisible(); })
+    .then(([txs,s])=>{
+      transactions=txs;
+      settings={...settings,...s};
+      setLanguage(settings.language || 'en', false);
+      updateBalance();
+      applyRecurringIfNeeded();
+      syncSettingsUI();
+      updateSeasonalStats();
+      refreshGraphIfVisible();
+    })
     .then(()=> scheduleLocalBackup('db-init'))
     .catch(err=>{
       console.error('DB init error', err);

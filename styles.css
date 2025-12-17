@@ -167,7 +167,13 @@ html.theme-dark .circle.expense {
 .modal-overlay { position:absolute; inset:0; background:rgba(0,0,0,.65); cursor:pointer; }
 .modal-panel { position:absolute; top:5rem; left:1.25rem; right:1.25rem; max-width:500px; margin:0 auto; background:var(--modal-bg); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); border:1px solid var(--panel-border); border-radius:var(--radius-xl); padding:1.5rem 1.4rem 2rem; display:flex; flex-direction:column; gap:1.2rem; box-shadow:0 20px 60px rgba(0,0,0,.6); animation:slideUp .3s cubic-bezier(.4,0,.2,1); max-height:calc(90vh - 4rem); overflow-y:auto; }
 .help-panel { max-width:720px; }
-.help-content { display:flex; flex-direction:column; gap:1.1rem; max-height:calc(80vh - 4rem); overflow:auto; padding-right:.35rem; }
+.help-panel { overflow:hidden; }
+.help-content { display:flex; flex-direction:column; gap:1.1rem; max-height:calc(80vh - 4rem); overflow:auto; padding-right:.35rem; overscroll-behavior:contain; touch-action:pan-y; }
+
+@supports (-webkit-overflow-scrolling: touch) {
+  .modal-panel { -webkit-overflow-scrolling: touch; }
+  .help-content { -webkit-overflow-scrolling: touch; }
+}
 .help-content section { background:rgba(0,0,0,0.02); border-radius:18px; padding:1rem 1.1rem; border:1px solid rgba(255,255,255,0.08); }
 html.theme-light .help-content section { background:rgba(0,0,0,0.02); border-color:rgba(0,0,0,0.08); }
 .help-content h3 { margin:0 0 .35rem; font-size:1.05rem; }
@@ -1006,8 +1012,8 @@ html.theme-light .group-summary { box-shadow:0 12px 28px rgba(0,0,0,.12); }
   100% { transform:scale(1); box-shadow:0 0 0 0 rgba(255,255,255,0); }
 }
 .empty { text-align:center; padding:4rem 2rem 2rem; opacity:.5; font-size:.95rem; }
-/* Small visual for toggle label spacing (keeps aligned with other toggles) */
-.toggle-row input[type=checkbox] { margin-right: .6rem; }
+/* Small visual for checkbox label spacing (switches have their own UI element) */
+.toggle-row:not(.switch) > input[type=checkbox] { margin-right: .6rem; }
 
 /* Switch control styles for theme toggle */
 .toggle-row.switch { align-items:center; }
@@ -1017,6 +1023,7 @@ html.theme-light .group-summary { box-shadow:0 12px 28px rgba(0,0,0,.12); }
   --sh:28px;
   width:var(--sw);
   height:var(--sh);
+  display:inline-block;
   border-radius:999px;
   background:rgba(255,255,255,.15);
   border:0;
@@ -1026,6 +1033,7 @@ html.theme-light .group-summary { box-shadow:0 12px 28px rgba(0,0,0,.12); }
   transition:background .2s ease;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
 }
+.switch-ui .switch-thumb { display:none; }
 .switch-ui { position:relative; }
 .switch-ui::after {
   content: '';

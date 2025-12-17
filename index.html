@@ -237,7 +237,7 @@
         <div class="settings-body">
           <div class="settings-help-btn-row with-bottom-gap">
             <button id="btnHelpManual" class="btn ghost">Help & Support</button>
-            <div class="app-version" aria-hidden="true">v0.9.6.1</div>
+            <div class="app-version" aria-hidden="true">v0.9.6.7</div>
           </div>
           <div class="settings-grid">
             <section class="settings-card" aria-labelledby="generalHeading">
@@ -258,6 +258,14 @@
                 <label for="currencySymbol" class="small-label">Currency symbol</label>
                 <input id="currencySymbol" type="text" class="text-input" maxlength="3" placeholder="€" />
                 <div class="preview small">Shown after every amount (e.g. €, $, Kč).</div>
+              </div>
+              <div class="setting-row">
+                <label for="languageSelect" class="small-label">Language</label>
+                <select id="languageSelect" class="text-input select-input">
+                  <option value="en">English</option>
+                  <option value="hr">Hrvatski</option>
+                </select>
+                <div class="preview small">Changes the app text immediately.</div>
               </div>
               <div class="setting-row">
                 <label class="small-label" for="singleButtonModeToggle">Home input buttons</label>
@@ -367,6 +375,19 @@
               <li>Optionally tap "Add note" to include additional context.</li>
               <li>Tap <strong>Add</strong> to save the transaction.</li>
             </ol>
+          </section>
+
+          <section>
+            <h3>Recent Changes & Tips</h3>
+            <ul>
+              <li><strong>Move part of amount:</strong> When editing a transaction, use "Move a part of the amount to..." to split a mixed purchase. The UI opens a small sub-page where you pick the moved amount, category and name; a new transaction is created for the moved amount and the original is reduced (or removed if emptied).</li>
+              <li><strong>Amount entry consistency:</strong> The Move-part amount uses the same digit-entry system as the main sheet — tap the big amount to open the numeric keypad, type digits, and use Backspace to remove digits; values are stored as cents.</li>
+              <li><strong>Suggestions (categories & names):</strong> Inputs now use in-app suggestion chips rather than browser datalists. This removes the large native picker on iOS and keeps a consistent look across devices. Start typing to filter chips; tapping a chip clears the search and reveals related names.</li>
+              <li><strong>Insights — Time Range:</strong> The donut/timeline charts support a Time Range control with presets (This week, Last week, This month, Last month) and custom ranges — pick a range to update the chart and breakdown accordingly.</li>
+              <li><strong>Donut center overlay:</strong> The donut center overlay is persistent, scaled to better fit the hole, and will be hidden automatically when the total is zero so the "No data" message is visible.</li>
+              <li><strong>Calendar week definition:</strong> "This Week" uses a calendar week (Monday → Sunday) so totals match across Dashboard and History.</li>
+              <li><strong>iPhone top-bar:</strong> The top app bar respects the iPhone safe-area to avoid overlapping the status indicators (clock, battery).</li>
+            </ul>
           </section>
 
           <section>

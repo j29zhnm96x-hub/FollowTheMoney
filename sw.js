@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v5';
 const CACHE_NAME = `followthemoney-static-${CACHE_VERSION}`;
 const CORE_ASSETS = [
   './',
@@ -7,6 +7,8 @@ const CORE_ASSETS = [
   './app.js',
   './seasonal.js',
   './manifest.json',
+  './locales/en.json',
+  './locales/hr.json',
   './img/favicon.png?v=2',
   './favicon.ico'
 ];
