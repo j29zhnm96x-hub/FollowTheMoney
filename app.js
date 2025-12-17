@@ -2145,7 +2145,9 @@
       const now = Date.now();
       const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
       const todayEnd = todayStart.getTime() + 86400000 - 1;
-      const weekStart = todayStart.getTime() - (6*86400000);
+      // Calendar week (Mon-Sun) to match dashboard "Weekly" spent.
+      const dayOfWeek = (todayStart.getDay() + 6) % 7; // 0 = Monday
+      const weekStart = todayStart.getTime() - (dayOfWeek * 86400000);
       const monthStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1).getTime();
       if(historyFilter === 'day'){
         filteredTxs = transactions.filter(t => t.createdAt >= todayStart.getTime() && t.createdAt <= todayEnd);
