@@ -83,7 +83,7 @@ html, body { -ms-touch-action: manipulation; touch-action: manipulation; }
   overflow-y:auto;
   scroll-padding-top:calc(var(--topbar-offset));
 }
-#screen-home { overflow:hidden; padding-bottom:calc(7rem + env(safe-area-inset-bottom)); }
+#screen-home { overflow:hidden; padding-bottom:calc(7rem + env(safe-area-inset-bottom)); overscroll-behavior:none; touch-action:pan-x; }
 .screen.active { opacity:1; }
 .top-bar { display:flex; align-items:center; justify-content:space-between; padding:1.25rem .25rem 1rem; padding-top:calc(1.25rem + env(safe-area-inset-top, 0px)); gap:.5rem; position:fixed; top:0; left:0; right:0; z-index:30; background:var(--topbar-bg); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
 .logo { font-size:1.35rem; font-weight:800; letter-spacing:-.3px; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

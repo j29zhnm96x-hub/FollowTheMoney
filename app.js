@@ -4597,6 +4597,20 @@
       const tgt = e.target;
       if(tgt && tgt.closest && tgt.closest('input, textarea, .text-input')) return; // allow in text fields
       e.preventDefault();
+      return;
+    }
+
+    // Disable vertical swipe/scroll on the Home screen (it has no purpose there).
+    // Keep scrolling enabled inside modals/sheets and other screens.
+    if(e.touches && e.touches.length === 1 && currentScreen === 'home'){
+      const tgt = e.target;
+      const overlayOpen =
+        (sheet && !sheet.hidden) ||
+        (settingsModal && !settingsModal.hidden) ||
+        (helpModal && !helpModal.hidden);
+      if(overlayOpen) return;
+      if(tgt && tgt.closest && tgt.closest('input, textarea, .text-input')) return;
+      e.preventDefault();
     }
   }, { passive: false });
 
