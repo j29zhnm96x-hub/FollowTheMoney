@@ -3104,7 +3104,7 @@
           if(current<-100){
             const confirmed = confirm(t('delete_transaction_confirm'));
             if(confirmed){
-              deleteTx(t.id);
+              deleteTx(tx.id);
             }
           }
           resetPosition();
