@@ -2636,8 +2636,32 @@
   function parseBackupText(text){
     const parsed = JSON.parse(text);
     if(!parsed || typeof parsed !== 'object') throw new Error('Invalid backup format.');
-    const importedTxs = normalizeImportedTransactions(parsed.transactions || []);
-    const importedSettings = normalizeImportedSettings(parsed.settings || {});
+    // Legacy shape support: try several fallbacks so older backups still import
+    const maybeArray = Array.isArray(parsed) ? parsed : null;
+    const txCandidates = [
+      parsed.transactions,
+      parsed.txs,
+      parsed.entries,
+      parsed.data && parsed.data.transactions,
+      parsed.backup && parsed.backup.transactions,
+      maybeArray
+    ].filter(Boolean);
+    const settingsCandidates = [
+      parsed.settings,
+      parsed.prefs,
+      parsed.data && parsed.data.settings,
+      parsed.backup && parsed.backup.settings
+    ].filter(Boolean);
+
+    const txSource = txCandidates.find(Array.isArray);
+    const settingsSource = settingsCandidates.find(s=> s && typeof s === 'object');
+
+    if(!txSource || !settingsSource){
+      throw new Error('Invalid backup shape. Expected transactions array and settings object.');
+    }
+
+    const importedTxs = normalizeImportedTransactions(txSource);
+    const importedSettings = normalizeImportedSettings(settingsSource);
     return { importedTxs, importedSettings };
   }
   async function applyImportedData(importedTxs, importedSettings){
@@ -2803,6 +2827,8 @@
       homeScreen.hidden = true;
       historyScreen.hidden = false;
       historyScreen.classList.add('active');
+      currentScreen = 'history';
+      syncGraphScreenVisibility();
       renderHistory();
     };
 
@@ -4394,18 +4420,31 @@
     importFileInput.addEventListener('change',()=>{
       const file = importFileInput.files && importFileInput.files[0];
       if(!file) return;
+      if(!file.name.toLowerCase().endsWith('.json')){
+        console.warn('Import aborted: not a .json file');
+        alert(t('unable_read_file'));
+        importFileInput.value='';
+        return;
+      }
       const reader = new FileReader();
       btnImportData.disabled = true;
       reader.onload = async ()=>{
         try{
           const text = typeof reader.result === 'string' ? reader.result : '';
+          console.log('Import: parsing backup text');
           const { importedTxs, importedSettings } = parseBackupText(text);
+          console.log('Import: parsed data', { txCount: importedTxs.length, settings: importedSettings });
           const proceed = confirm(t('import_replace_confirm'));
-          if(!proceed) return;
+          if(!proceed){
+            console.log('Import: user cancelled');
+            return;
+          }
+          console.log('Import: applying data');
           await applyImportedData(importedTxs, importedSettings);
+          console.log('Import: success');
           alert(t('backup_imported_success'));
         }catch(err){
-          console.error('Import error', err);
+          console.error('Import error:', err);
           alert(t('backup_import_failed'));
         } finally {
           btnImportData.disabled = false;
@@ -4413,10 +4452,12 @@
         }
       };
       reader.onerror = ()=>{
+        console.error('Import file read error');
         btnImportData.disabled = false;
         importFileInput.value='';
         alert(t('unable_read_file'));
       };
+      console.log('Import: reading file');
       reader.readAsText(file);
     });
   }
