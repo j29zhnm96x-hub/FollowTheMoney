@@ -2314,6 +2314,7 @@
     const isCategory = kind === 'category';
     const collectionKeyName = isCategory ? 'categories' : 'names';
     const base = new Set();
+    const freq = new Map();
     const selectedCategory = categoryInput && categoryInput.value.trim();
     // If a category is selected, names should only come from that category (if any).
     // We don't have a persistent category->names map, so we rely on existing transactions.
@@ -2330,13 +2331,21 @@
         if(!t.category || !equalsIgnoreCase(t.category, selectedCategory)) return;
       }
       const value = isCategory ? t.category : t.name;
-      if(value) base.add(value);
+      if(!value) return;
+      base.add(value);
+      const prev = freq.get(value) || 0;
+      freq.set(value, prev + 1);
     });
     const text = (filterText || '').trim().toLowerCase();
     return Array.from(base)
       .filter(Boolean)
       .filter(val=> !text || val.toLowerCase().includes(text))
-      .sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
+      .sort((a,b)=>{
+        const aFreq = freq.get(a) || 0;
+        const bFreq = freq.get(b) || 0;
+        if(aFreq !== bFreq) return bFreq - aFreq; // higher frequency first
+        return a.localeCompare(b, undefined, { sensitivity:'base' });
+      });
   }
   function ensureCollectionEntry(type, kind, value){
     if(!value || !type) return Promise.resolve();
