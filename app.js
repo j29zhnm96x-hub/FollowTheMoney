@@ -1478,6 +1478,12 @@
     renderMovePartSuggestions('category');
     updateMovePartNameInputState();
     updateMovePartConfirmState();
+    // Ensure any attached clear buttons update their visibility after we set values
+    try{
+      movePartCategoryInput && movePartCategoryInput.dispatchEvent(new Event('input', { bubbles:true }));
+      movePartNameInput && movePartNameInput.dispatchEvent(new Event('input', { bubbles:true }));
+      movePartRawDigits && movePartRawDigits.dispatchEvent(new Event('input', { bubbles:true }));
+    }catch(_){ }
     setTimeout(()=>{ try{ movePartRawDigits && movePartRawDigits.focus(); }catch(_){} }, 50);
   }
 
@@ -2346,6 +2352,34 @@
         if(aFreq !== bFreq) return bFreq - aFreq; // higher frequency first
         return a.localeCompare(b, undefined, { sensitivity:'base' });
       });
+  }
+
+  function attachClearButton(inputEl){
+    if(!inputEl || inputEl.dataset.clearAttached === '1') return;
+    const parent = inputEl.parentElement;
+    if(!parent) return;
+    parent.classList.add('input-with-clear');
+    inputEl.classList.add('has-clear');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'input-clear-btn';
+    btn.setAttribute('aria-label','Clear');
+    btn.textContent = '×';
+    const refreshVisibility = ()=>{
+      const hasText = !!(inputEl.value && inputEl.value.length);
+      btn.style.display = (!inputEl.disabled && hasText) ? 'block' : 'none';
+    };
+    btn.addEventListener('click',()=>{
+      inputEl.value='';
+      inputEl.dispatchEvent(new Event('input', { bubbles:true }));
+      refreshVisibility();
+      inputEl.focus();
+    });
+    inputEl.addEventListener('input', refreshVisibility);
+    inputEl.addEventListener('change', refreshVisibility);
+    parent.appendChild(btn);
+    refreshVisibility();
+    inputEl.dataset.clearAttached = '1';
   }
   function ensureCollectionEntry(type, kind, value){
     if(!value || !type) return Promise.resolve();
@@ -4081,6 +4115,9 @@
   if(movePartConfirmBtn){
     movePartConfirmBtn.addEventListener('click', handleMovePartConfirm);
   }
+  attachClearButton(movePartCategoryInput);
+  attachClearButton(movePartNameInput);
+  attachClearButton(movePartRawDigits);
   if(recurringToggle && recurringFrequency){
     recurringToggle.addEventListener('change',()=>{
       recurringFrequency.hidden = !recurringToggle.checked;
@@ -4090,6 +4127,7 @@
   rawDigits.addEventListener('input',updateSheetAmount);
   sheetAmountEl.addEventListener('click',()=>{ rawDigits.focus(); rawDigits.select && rawDigits.select(); });
   if(categoryInput){
+    attachClearButton(categoryInput);
     categoryInput.addEventListener('input',()=>{
       updateNameInputState();
       refreshNameOptions();
@@ -4098,6 +4136,7 @@
     });
   }
   if(nameInput){
+    attachClearButton(nameInput);
     nameInput.addEventListener('input',()=>{
       renderSheetSuggestions('name');
       updateConfirmState();
@@ -4177,6 +4216,7 @@
   if(nameSuggestionsEl) nameSuggestionsEl.addEventListener('click',handleSuggestionClick);
   attachLongPressHandlers(categorySuggestionsEl,'.suggestion-chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
   attachLongPressHandlers(nameSuggestionsEl,'.suggestion-chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
+  attachClearButton(noteInput);
   if(graphTypeFiltersEl){
     graphTypeFiltersEl.addEventListener('click',e=>{
       const btn = e.target.closest('.graph-type-pill');
