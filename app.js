@@ -4117,7 +4117,10 @@
   }
   attachClearButton(movePartCategoryInput);
   attachClearButton(movePartNameInput);
-  attachClearButton(movePartRawDigits);
+  // Don't attach clear button to hidden/offscreen inputs (they sit next to visible labels)
+  if(movePartRawDigits && !movePartRawDigits.classList.contains('hidden-input') && movePartRawDigits.type !== 'hidden'){
+    attachClearButton(movePartRawDigits);
+  }
   if(recurringToggle && recurringFrequency){
     recurringToggle.addEventListener('change',()=>{
       recurringFrequency.hidden = !recurringToggle.checked;
