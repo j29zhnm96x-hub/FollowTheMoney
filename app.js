@@ -540,7 +540,7 @@
       add_expense_aria: 'Add expense',
       recent_aria: 'Recent transactions',
 
-      search_categories_or_names: 'Search categories or names',
+      search_categories_or_names: 'Search categories, names, or notes',
       search_filters: 'Search filters',
       all_categories: 'All categories',
       all_names: 'All names',
@@ -723,7 +723,7 @@
       add_expense_aria: 'Dodaj trošak',
       recent_aria: 'Nedavne transakcije',
 
-      search_categories_or_names: 'Pretraži kategorije ili nazive',
+      search_categories_or_names: 'Pretraži kategorije, nazive ili bilješke',
       search_filters: 'Pretraži filtere',
       all_categories: 'Sve kategorije',
       all_names: 'Svi nazivi',
@@ -1370,6 +1370,25 @@
     if(a==null || b==null) return false;
     return String(a).toLowerCase() === String(b).toLowerCase();
   };
+  const normalizeSearchText = value=>{
+    if(value == null) return '';
+    const text = String(value);
+    const normalized = typeof text.normalize === 'function' ? text.normalize('NFD') : text;
+    return normalized.replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  };
+  const includesSearchText = (value, query)=>{
+    if(!query) return true;
+    return normalizeSearchText(value).includes(query);
+  };
+  const getTransactionSearchText = tx=>[
+    tx && tx.category,
+    tx && tx.name,
+    tx && tx.note,
+    tx && tx.notes,
+    tx && tx.description,
+    tx && tx.memo,
+    tx && tx.details
+  ].filter(Boolean).join(' ');
   const pad2 = num => String(num).padStart(2,'0');
 
   function updateMovePartAmount(){
@@ -2484,9 +2503,9 @@
     if(historyNameFilter && !nameValues.some(n=>equalsIgnoreCase(n, historyNameFilter))){
       historyNameFilter = null;
     }
-    const query = (historyChipSearchText || '').trim().toLowerCase();
+    const query = normalizeSearchText((historyChipSearchText || '').trim());
     if(query){
-      const applyQuery = values => values.filter(v=> String(v).toLowerCase().includes(query));
+      const applyQuery = values => values.filter(v=> includesSearchText(v, query));
       categoryValues = applyQuery(categoryValues);
       nameValues = applyQuery(nameValues);
       // keep active filters visible even if they don't match the search text
@@ -3083,16 +3102,9 @@
       const normName = historyNameFilter.toLowerCase();
       filteredTxs = filteredTxs.filter(t=> t.name && t.name.toLowerCase()===normName);
     }
-    const historySearchQuery = (historyChipSearchText || '').trim().toLowerCase();
+    const historySearchQuery = normalizeSearchText((historyChipSearchText || '').trim());
     if(historySearchQuery){
-      filteredTxs = filteredTxs.filter(t=>{
-        const category = String(t.category || '').toLowerCase();
-        const name = String(t.name || '').toLowerCase();
-        const note = String(t.note || '').toLowerCase();
-        return category.includes(historySearchQuery)
-          || name.includes(historySearchQuery)
-          || note.includes(historySearchQuery);
-      });
+      filteredTxs = filteredTxs.filter(t=> includesSearchText(getTransactionSearchText(t), historySearchQuery));
     }
     if(historyFilterEl){
       if(historyFilter){
