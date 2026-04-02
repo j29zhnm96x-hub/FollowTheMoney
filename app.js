@@ -2377,7 +2377,13 @@
     if(!inputEl || inputEl.dataset.clearAttached === '1') return;
     const parent = inputEl.parentElement;
     if(!parent) return;
-    parent.classList.add('input-with-clear');
+    let wrapper = parent.classList.contains('input-with-clear') ? parent : null;
+    if(!wrapper){
+      wrapper = document.createElement('div');
+      wrapper.className = 'input-with-clear';
+      parent.insertBefore(wrapper, inputEl);
+      wrapper.appendChild(inputEl);
+    }
     inputEl.classList.add('has-clear');
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -2386,7 +2392,7 @@
     btn.textContent = '×';
     const refreshVisibility = ()=>{
       const hasText = !!(inputEl.value && inputEl.value.length);
-      btn.style.display = (!inputEl.disabled && hasText) ? 'block' : 'none';
+      btn.style.display = (!inputEl.disabled && hasText) ? 'flex' : 'none';
     };
     btn.addEventListener('click',()=>{
       inputEl.value='';
@@ -2396,7 +2402,7 @@
     });
     inputEl.addEventListener('input', refreshVisibility);
     inputEl.addEventListener('change', refreshVisibility);
-    parent.appendChild(btn);
+    wrapper.appendChild(btn);
     refreshVisibility();
     inputEl.dataset.clearAttached = '1';
   }
