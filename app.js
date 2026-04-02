@@ -3083,6 +3083,17 @@
       const normName = historyNameFilter.toLowerCase();
       filteredTxs = filteredTxs.filter(t=> t.name && t.name.toLowerCase()===normName);
     }
+    const historySearchQuery = (historyChipSearchText || '').trim().toLowerCase();
+    if(historySearchQuery){
+      filteredTxs = filteredTxs.filter(t=>{
+        const category = String(t.category || '').toLowerCase();
+        const name = String(t.name || '').toLowerCase();
+        const note = String(t.note || '').toLowerCase();
+        return category.includes(historySearchQuery)
+          || name.includes(historySearchQuery)
+          || note.includes(historySearchQuery);
+      });
+    }
     if(historyFilterEl){
       if(historyFilter){
         const labels = {day:t('today'),week:t('this_week'),month:t('this_month')};
@@ -4149,6 +4160,7 @@
     historyChipSearchInput.addEventListener('input', ()=>{
       historyChipSearchText = historyChipSearchInput.value || '';
       renderFilterChips();
+      renderHistory();
     });
   }
   if(historyTypeFiltersEl){
