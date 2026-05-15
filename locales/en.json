@@ -141,6 +141,8 @@
   "summary_preview_transactions_aria": "Preview transactions",
   "summary_preview": "Preview",
   "summary_hint": "Swipe left on an entry to toggle whether it counts toward the average.",
+  "chip_collapse": "− Show less",
+  "chip_expand": "+{count} more",
   "income_only": "Income only",
   "expenses_only": "Expenses only",
   "filter_category_prefix": "Category:",

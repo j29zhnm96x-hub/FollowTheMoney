@@ -162,6 +162,8 @@
   "summary_preview": "Pregled",
   "summary_hint": "Povuci ulijevo po stavci kako bi uključio/isključio u prosjek.",
 
+  "chip_collapse": "− Prikaži manje",
+  "chip_expand": "+{count} više",
   "income_only": "Samo prihodi",
   "expenses_only": "Samo troškovi",
   "filter_category_prefix": "Kategorija:",

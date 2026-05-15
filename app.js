@@ -166,6 +166,9 @@
   let _ftm_lastGraphRangeToggle = 0;
   const graphColorCache = new Map();
   const graphPalette = ['#30d6a4','#ff4f6a','#6580ff','#f6c343','#58c7ff','#ff9fd5','#8be28b','#ffa25e','#ffd166','#b388ff'];
+  const chipPalette = ['#b8f0d9','#fdbcc6','#bcc6ff','#fdeaa1','#b8e5ff','#ffd9ec','#c8f0c8','#ffd4b0','#ffe9a8','#ddd0ff'];
+  const chipExpandedState = new Map();
+  const CHIP_LIMIT = 14;
   let timelineSeriesData = null;
   let timelineEntriesByDay = new Map();
   let timelineChartMeta = null;
@@ -690,6 +693,8 @@
       summary_preview: 'Preview',
       summary_hint: 'Swipe left on an entry to toggle whether it counts toward the average.',
 
+      chip_collapse: '\u2212 Show less',
+      chip_expand: '+{count} more',
       income_only: 'Income only',
       expenses_only: 'Expenses only',
       filter_category_prefix: 'Category:',
@@ -873,6 +878,8 @@
       summary_preview: 'Pregled',
       summary_hint: 'Povuci ulijevo po stavci kako bi uključio/isključio u prosjek.',
 
+      chip_collapse: '\u2212 Prikaži manje',
+      chip_expand: '+{count} vi\u0161e',
       income_only: 'Samo prihodi',
       expenses_only: 'Samo troškovi',
       filter_category_prefix: 'Kategorija:',
@@ -1446,16 +1453,33 @@
     }
     container.hidden = false;
     container.innerHTML = '';
-    values.forEach(val=>{
+    const scopeKey = 'movepart-' + kind;
+    const isExpanded = chipExpandedState.get(scopeKey) || false;
+    const hasMore = values.length > CHIP_LIMIT;
+    const visible = (!hasMore || isExpanded) ? values : values.slice(0, CHIP_LIMIT);
+    visible.forEach(val=>{
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'suggestion-chip';
+      btn.className = 'suggestion-chip chip-colored';
       btn.textContent = val;
+      btn.style.background = getChipColor(val);
       btn.dataset.kind = kind;
       btn.dataset.value = val;
       btn.dataset.scope = 'move-part';
       container.appendChild(btn);
     });
+    if(hasMore){
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'suggestion-chip chip-toggle';
+      toggleBtn.textContent = isExpanded ? t('chip_collapse') : tFmt('chip_expand', { count: values.length - CHIP_LIMIT });
+      toggleBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        chipExpandedState.set(scopeKey, !isExpanded);
+        renderMovePartSuggestions(kind);
+      });
+      container.appendChild(toggleBtn);
+    }
   }
 
   function updateMovePartNameInputState(){
@@ -1516,6 +1540,8 @@
     if(movePartCategorySuggestionsEl){ movePartCategorySuggestionsEl.hidden = true; movePartCategorySuggestionsEl.innerHTML = ''; }
     if(movePartNameSuggestionsEl){ movePartNameSuggestionsEl.hidden = true; movePartNameSuggestionsEl.innerHTML = ''; }
     if(movePartConfirmBtn){ delete movePartConfirmBtn.dataset.cents; movePartConfirmBtn.disabled = true; }
+    chipExpandedState.delete('movepart-category');
+    chipExpandedState.delete('movepart-name');
   }
   function formatDateTime(timestamp, includeTime=true){
     const date = new Date(timestamp);
@@ -1564,6 +1590,11 @@
     const color = graphPalette[getGraphColorIndex(label)];
     graphColorCache.set(label,color);
     return color;
+  }
+  function getChipColor(label){
+    if(!label) return chipPalette[0];
+    const hash = Array.from(label).reduce((acc,char)=> acc + char.charCodeAt(0),0);
+    return chipPalette[hash % chipPalette.length];
   }
   function assignSegmentColors(segments){
     const colorMap = new Map();
@@ -2545,8 +2576,10 @@
     values.forEach(val=>{
       const btn=document.createElement('button');
       btn.type='button';
-      btn.className='chip';
-      if(activeValue && activeValue.toLowerCase()===val.toLowerCase()) btn.classList.add('active');
+      btn.className='chip chip-colored';
+      const isActive = activeValue && activeValue.toLowerCase()===val.toLowerCase();
+      if(isActive) btn.classList.add('active');
+      else btn.style.background = getChipColor(val);
       btn.textContent=val;
       btn.dataset.value=val;
       btn.dataset.kind=kind;
@@ -2766,17 +2799,34 @@
     }
     container.hidden = false;
     container.innerHTML='';
-    values.forEach(val=>{
+    const scopeKey = 'sheet-' + kind;
+    const isExpanded = chipExpandedState.get(scopeKey) || false;
+    const hasMore = values.length > CHIP_LIMIT;
+    const visible = (!hasMore || isExpanded) ? values : values.slice(0, CHIP_LIMIT);
+    visible.forEach(val=>{
       const btn = document.createElement('button');
       btn.type='button';
-      btn.className='suggestion-chip';
+      btn.className='suggestion-chip chip-colored';
       btn.textContent = val;
+      btn.style.background = getChipColor(val);
       btn.dataset.kind = kind;
       btn.dataset.value = val;
       btn.dataset.scope = 'sheet';
       btn.dataset.typeScope = sheetType || 'income';
       container.appendChild(btn);
     });
+    if(hasMore){
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'suggestion-chip chip-toggle';
+      toggleBtn.textContent = isExpanded ? t('chip_collapse') : tFmt('chip_expand', { count: values.length - CHIP_LIMIT });
+      toggleBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        chipExpandedState.set(scopeKey, !isExpanded);
+        renderSheetSuggestions(kind);
+      });
+      container.appendChild(toggleBtn);
+    }
   }
 
   function typeScopesForContext(context){
@@ -3508,6 +3558,8 @@
       delete sheetPanel.dataset.mode;
     }
     closeMovePartOverlay();
+    chipExpandedState.delete('sheet-category');
+    chipExpandedState.delete('sheet-name');
     if(confirmBtn){
       delete confirmBtn.dataset.processing;
     }
