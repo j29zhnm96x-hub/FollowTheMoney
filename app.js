@@ -4165,38 +4165,36 @@
     };
 
     try{
-      await dbAddTransaction(newTx);
-      await Promise.all([
-        ensureCollectionEntry(sheetType,'categories', categoryValue),
-        ensureCollectionEntry(sheetType,'names', nameValue)
-      ]);
+      // Atomically write both operations in a single IndexedDB transaction.
+      // If any write fails, the entire transaction rolls back — no phantom duplicates.
+      await new Promise((resolve,reject)=>{
+        const tx = db.transaction([TX_STORE, SETTINGS_STORE], 'readwrite');
+        const store = tx.objectStore(TX_STORE);
+        store.put(newTx);
+        if(remainderAbs === 0){
+          store.delete(editingTransaction.id);
+        } else {
+          store.put({ ...editingTransaction, amountCents: sign * remainderAbs });
+        }
+        tx.oncomplete = ()=> resolve();
+        tx.onerror = ()=> reject(tx.error);
+        tx.onabort = ()=> reject(tx.error);
+      });
 
+      // DB is committed — update in-memory state
       if(remainderAbs === 0){
-        await dbDeleteTransaction(editingTransaction.id);
         transactions = transactions.filter(t=> t.id !== editingTransaction.id);
         transactions.unshift(newTx);
-        updateBalance();
-        renderRecent();
-        if(!historyScreen.hidden) renderHistory();
-        updateSeasonalStats();
-        refreshGraphIfVisible();
-        scheduleLocalBackup('move-part-transfer');
-        closeMovePartOverlay();
-        closeSheet();
-        return;
+      } else {
+        const idx = transactions.findIndex(t=> t.id === editingTransaction.id);
+        if(idx !== -1){
+          transactions[idx] = { ...editingTransaction, amountCents: sign * remainderAbs };
+        }
+        transactions.unshift(newTx);
+        transactions.sort((a,b)=>b.createdAt - a.createdAt);
+        rawDigits.value = String(remainderAbs);
+        updateSheetAmount();
       }
-
-      const updatedSource = { ...editingTransaction, amountCents: sign * remainderAbs };
-      await dbAddTransaction(updatedSource);
-
-      const idx = transactions.findIndex(t=> t.id === updatedSource.id);
-      if(idx !== -1) transactions[idx] = updatedSource;
-      transactions.unshift(newTx);
-      transactions.sort((a,b)=>b.createdAt - a.createdAt);
-
-      editingTransaction = updatedSource;
-      rawDigits.value = String(remainderAbs);
-      updateSheetAmount();
 
       updateBalance();
       renderRecent();
@@ -4206,6 +4204,13 @@
       scheduleLocalBackup('move-part-transfer');
 
       closeMovePartOverlay();
+      if(remainderAbs === 0) closeSheet();
+
+      // Save category/name suggestions (non-critical, separate transaction)
+      Promise.all([
+        ensureCollectionEntry(sheetType,'categories', categoryValue),
+        ensureCollectionEntry(sheetType,'names', nameValue)
+      ]).catch(()=>{});
     }catch(err){
       console.error('Move-part transfer failed', err);
       alert(t('transfer_failed'));
