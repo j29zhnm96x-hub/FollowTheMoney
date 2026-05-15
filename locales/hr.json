@@ -154,6 +154,10 @@
   "amount_move_exceeds": "Iznos za premještanje ne može biti veći od iznosa transakcije.",
   "invalid_amount": "Neispravan iznos.",
   "transfer_failed": "Trenutno nije moguće premjestiti dio iznosa.",
+  "group_delete_blocked": "Nije moguće izbrisati! Postoje stavke u ovoj kategoriji/nazivu.",
+  "group_delete_confirm": "Izbriši spremljeno {kind} \"{value}\"? Ovo se ne može poništiti.",
+  "group_delete_error": "Trenutno nije moguće izbrisati ovaj unos. Pokušaj ponovno.",
+  "all_types": "Sve vrste",
   "save_error": "Nije moguće spremiti promjene. Pokušaj ponovno.",
 
   "summary_total_balance": "Ukupno stanje",

@@ -678,6 +678,10 @@
       invalid_amount: 'Invalid amount.',
       transfer_failed: 'Unable to transfer part of the amount right now.',
       save_error: 'Unable to save your changes. Please try again.',
+      group_delete_blocked: 'Unable to delete! There are items in this category/name group.',
+      group_delete_confirm: 'Delete saved {kind} "{value}"? This cannot be undone.',
+      group_delete_error: 'Unable to delete this entry right now. Please try again.',
+      all_types: 'All types',
 
       amount_entry_aria: 'Amount entry',
       select_or_type_category: 'Select or type category',
@@ -864,6 +868,10 @@
       invalid_amount: 'Neispravan iznos.',
       transfer_failed: 'Trenutno nije moguće premjestiti dio iznosa.',
       save_error: 'Nije moguće spremiti promjene. Pokušaj ponovno.',
+      group_delete_blocked: 'Nije moguće izbrisati! Postoje stavke u ovoj kategoriji/nazivu.',
+      group_delete_confirm: 'Izbriši spremljeno {kind} "{value}"? Ovo se ne može poništiti.',
+      group_delete_error: 'Trenutno nije moguće izbrisati ovaj unos. Pokušaj ponovno.',
+      all_types: 'Sve vrste',
 
       amount_entry_aria: 'Unos iznosa',
       select_or_type_category: 'Odaberi ili upiši kategoriju',
@@ -2915,10 +2923,10 @@
     let typeScope = target.dataset.typeScope || 'all';
     if(scope==='sheet' && sheetType) typeScope = sheetType;
     if(hasTransactionsForGroup(kind,value,typeScope)){
-      alert('Unable to delete! There are items in this category/name group.');
+      alert(t('group_delete_blocked'));
       return;
     }
-    const confirmed = confirm(`Delete saved ${kind} "${value}"? This cannot be undone.`);
+    const confirmed = confirm(tFmt('group_delete_confirm', { kind, value }));
     if(!confirmed) return;
     removeGroupValue(kind,value,typeScope)
       .then(()=>{
@@ -2933,7 +2941,7 @@
       })
       .catch(err=>{
         console.error('Failed to delete saved group', err);
-        alert('Unable to delete this entry right now. Please try again.');
+        alert(t('group_delete_error'));
       });
   }
 
@@ -3028,7 +3036,7 @@
     if(t.name) parts.push(t.name);
     if(parts.length) return parts.join(' / ');
     if(t.note) return t.note;
-    return t.amountCents>0 ? 'Income' : 'Expense';
+    return t.amountCents>0 ? t('income') : t('expense');
   }
 
   function updateHistorySummary(list){
@@ -3044,9 +3052,9 @@
     const labelSpan = document.createElement('span');
     labelSpan.className = 'label';
     const labelParts = [];
-    if(historyTypeFilter === 'income') labelParts.push('Income');
-    else if(historyTypeFilter === 'expense') labelParts.push('Expenses');
-    else labelParts.push('All types');
+    if(historyTypeFilter === 'income') labelParts.push(t('income'));
+    else if(historyTypeFilter === 'expense') labelParts.push(t('expenses'));
+    else labelParts.push(t('all_types'));
     if(historyCategoryFilter) labelParts.push(historyCategoryFilter);
     if(historyNameFilter) labelParts.push(historyNameFilter);
     labelSpan.textContent = labelParts.join(' · ') || t('all_entries');

@@ -163,6 +163,10 @@
   "amount_move_exceeds": "Amount to move cannot exceed the transaction amount.",
   "invalid_amount": "Invalid amount.",
   "transfer_failed": "Unable to transfer part of the amount right now.",
+  "group_delete_blocked": "Unable to delete! There are items in this category/name group.",
+  "group_delete_confirm": "Delete saved {kind} \"{value}\"? This cannot be undone.",
+  "group_delete_error": "Unable to delete this entry right now. Please try again.",
+  "all_types": "All types",
   "save_error": "Unable to save your changes. Please try again.",
 
   "amount_entry_aria": "Amount entry",
