@@ -672,6 +672,7 @@
       amount_move_exceeds: 'Amount to move cannot exceed the transaction amount.',
       invalid_amount: 'Invalid amount.',
       transfer_failed: 'Unable to transfer part of the amount right now.',
+      save_error: 'Unable to save your changes. Please try again.',
 
       amount_entry_aria: 'Amount entry',
       select_or_type_category: 'Select or type category',
@@ -857,6 +858,7 @@
       amount_move_exceeds: 'Iznos za premještanje ne može biti veći od iznosa transakcije.',
       invalid_amount: 'Neispravan iznos.',
       transfer_failed: 'Trenutno nije moguće premjestiti dio iznosa.',
+      save_error: 'Nije moguće spremiti promjene. Pokušaj ponovno.',
 
       amount_entry_aria: 'Unos iznosa',
       select_or_type_category: 'Odaberi ili upiši kategoriju',
@@ -3887,6 +3889,7 @@
       scheduleLocalBackup('add-transaction');
     }).catch(err=>{
       console.error('Error adding transaction:', err);
+      alert(t('save_error'));
     });
   }
 
@@ -3933,6 +3936,7 @@
       scheduleLocalBackup('edit-transaction');
     }).catch(err=>{
       console.error('Error updating transaction:', err);
+      alert(t('save_error'));
     });
   }
 
@@ -3945,6 +3949,9 @@
       updateSeasonalStats();
       refreshGraphIfVisible();
       scheduleLocalBackup('delete-transaction');
+    }).catch(err=>{
+      console.error('Error deleting transaction:', err);
+      alert(t('save_error'));
     });
   }
 
@@ -4675,6 +4682,7 @@
       });
     }).catch(err=>{
       console.error('Error clearing data', err);
+      alert(t('save_error'));
     });
   });
 

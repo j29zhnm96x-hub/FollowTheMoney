@@ -154,6 +154,7 @@
   "amount_move_exceeds": "Iznos za premještanje ne može biti veći od iznosa transakcije.",
   "invalid_amount": "Neispravan iznos.",
   "transfer_failed": "Trenutno nije moguće premjestiti dio iznosa.",
+  "save_error": "Nije moguće spremiti promjene. Pokušaj ponovno.",
 
   "summary_total_balance": "Ukupno stanje",
   "summary_entries": "Stavke",
