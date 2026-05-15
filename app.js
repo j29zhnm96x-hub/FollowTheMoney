@@ -4543,16 +4543,23 @@
   confirmBtn.addEventListener('touchend',handleConfirm);
 
   if(deleteBtn){
-    deleteBtn.addEventListener('click',()=>{
+    function handleDelete(e){
+      if(e) e.preventDefault();
+      if(sheetMode !== 'edit') return;
       if(!editingTransaction) return;
-      if(!confirm(t('delete_transaction_confirm'))) return;
-      deleteTx(editingTransaction.id).then(()=> closeSheet());
-    });
-    deleteBtn.addEventListener('touchend',()=>{
-      if(!editingTransaction) return;
-      if(!confirm(t('delete_transaction_confirm'))) return;
-      deleteTx(editingTransaction.id).then(()=> closeSheet());
-    });
+      if(deleteBtn.dataset.processing === '1') return;
+      deleteBtn.dataset.processing = '1';
+      if(!confirm(t('delete_transaction_confirm'))){
+        deleteBtn.dataset.processing = '0';
+        return;
+      }
+      deleteTx(editingTransaction.id).finally(()=>{
+        deleteBtn.dataset.processing = '0';
+        closeSheet();
+      });
+    }
+    deleteBtn.addEventListener('click', handleDelete);
+    deleteBtn.addEventListener('touchend', handleDelete);
   }
 
   if(themeToggleEl){
