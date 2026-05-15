@@ -1,0 +1,57 @@
+- region "Insights" [ref=e3]:
+  - banner [ref=e4]:
+    - heading "Insights" [level=1] [ref=e5]
+    - generic [ref=e6]:
+      - button "Toggle timeline view" [ref=e7] [cursor=pointer]:
+        - img [ref=e8]
+      - group "Graph type" [ref=e13]:
+        - button "Income" [ref=e14] [cursor=pointer]
+        - button "Expense" [ref=e15] [cursor=pointer]
+      - 'button "Time range: All time" [ref=e17] [cursor=pointer]'
+    - radiogroup "Group by" [ref=e18]:
+      - generic [ref=e19] [cursor=pointer]:
+        - radio "Categories" [checked] [ref=e20]
+        - generic [ref=e21]: Categories
+      - generic [ref=e22] [cursor=pointer]:
+        - radio "Names" [ref=e23]
+        - generic [ref=e24]: Names
+  - generic [ref=e26]:
+    - generic [ref=e27]:
+      - heading "Breakdown" [level=2] [ref=e29]
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e33]:
+            - generic [ref=e34]: Rent
+            - generic [ref=e35]: 750.00 €
+          - strong [ref=e36]: 51.7%
+        - generic [ref=e37]:
+          - generic [ref=e39]:
+            - generic [ref=e40]: Groceries
+            - generic [ref=e41]: 230.00 €
+          - strong [ref=e42]: 15.8%
+        - generic [ref=e43]:
+          - generic [ref=e45]:
+            - generic [ref=e46]: Utilities
+            - generic [ref=e47]: 220.00 €
+          - strong [ref=e48]: 15.2%
+        - generic [ref=e49]:
+          - generic [ref=e51]:
+            - generic [ref=e52]: Entertainment
+            - generic [ref=e53]: 120.00 €
+          - strong [ref=e54]: 8.3%
+        - generic [ref=e55]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: Dining Out
+            - generic [ref=e59]: 80.00 €
+          - strong [ref=e60]: 5.5%
+        - generic [ref=e61]:
+          - generic [ref=e63]:
+            - generic [ref=e64]: Transport
+            - generic [ref=e65]: 52.00 €
+          - strong [ref=e66]: 3.6%
+    - generic [ref=e68]:
+      - generic:
+        - paragraph: Total
+        - paragraph: 1,452.00 €
+        - paragraph: Expense · by categories
+      - generic "Distribution chart" [ref=e70]

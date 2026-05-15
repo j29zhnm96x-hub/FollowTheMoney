@@ -1,0 +1,75 @@
+- generic [ref=e2]:
+  - region "Home" [ref=e71]:
+    - generic [ref=e72]:
+      - button "History" [ref=e73] [cursor=pointer]
+      - heading "FollowTheMoney" [level=1] [ref=e74]
+      - button "Settings" [ref=e75] [cursor=pointer]:
+        - img [ref=e76]
+    - main [ref=e78]:
+      - generic [ref=e79]:
+        - text: Balance
+        - generic [ref=e80]: Budget mode
+      - generic "Balance" [ref=e81]: 4,248.00 €
+      - generic [ref=e82]:
+        - generic [ref=e83] [cursor=pointer]:
+          - generic [ref=e84]: Today
+          - generic [ref=e85]: +0.00 €
+          - generic [ref=e86]: "-0.00 €"
+        - generic [ref=e87] [cursor=pointer]:
+          - generic [ref=e88]: This week
+          - generic [ref=e89]: +4,500.00 €
+          - generic [ref=e90]: "-282.00 €"
+        - generic [ref=e91] [cursor=pointer]:
+          - generic [ref=e92]: This month
+          - generic [ref=e93]: +5,700.00 €
+          - generic [ref=e94]: "-1,452.00 €"
+      - generic "Recent transactions" [ref=e95]:
+        - generic [ref=e96]:
+          - generic [ref=e97]:
+            - generic [ref=e98]: Groceries / Lidl
+            - generic [ref=e99]: 14/05/26
+          - generic [ref=e100]: 150.00 €
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]: Transport / ZET
+            - generic [ref=e104]: 13/05/26
+          - generic [ref=e105]: 52.00 €
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108]: Salary / Company
+            - generic [ref=e109]: 12/05/26
+          - generic [ref=e110]: 4,500.00 €
+        - generic [ref=e111]:
+          - generic [ref=e112]:
+            - generic [ref=e113]: Dining Out / Restaurant
+            - generic [ref=e114]: 11/05/26
+          - generic [ref=e115]: 80.00 €
+        - generic [ref=e116]:
+          - generic [ref=e117]:
+            - generic [ref=e118]: Entertainment / Netflix
+            - generic [ref=e119]: 10/05/26
+          - generic [ref=e120]: 120.00 €
+    - generic [ref=e121]:
+      - button "Add income" [ref=e122] [cursor=pointer]
+      - button "Add expense" [ref=e123] [cursor=pointer]
+  - dialog "Amount entry" [ref=e126]:
+    - generic [ref=e128] [cursor=pointer]: 0.00 €
+    - generic [ref=e129]: Expense
+    - textbox [active] [ref=e130]: "0"
+    - generic [ref=e131]:
+      - generic [ref=e132]: Category
+      - textbox "Category" [ref=e134]:
+        - /placeholder: Expense category
+      - generic [ref=e135]:
+        - button "Groceries" [ref=e136] [cursor=pointer]
+        - button "Dining Out" [ref=e137] [cursor=pointer]
+        - button "Entertainment" [ref=e138] [cursor=pointer]
+        - button "Rent" [ref=e139] [cursor=pointer]
+        - button "Transport" [ref=e140] [cursor=pointer]
+        - button "Utilities" [ref=e141] [cursor=pointer]
+    - generic [ref=e142]:
+      - generic [ref=e143]: Name
+      - textbox "Name" [disabled] [ref=e145]
+    - button "Add note" [ref=e146] [cursor=pointer]
+    - button "Move a part of the amount to..." [ref=e147] [cursor=pointer]
+    - button "Add Expense" [disabled]

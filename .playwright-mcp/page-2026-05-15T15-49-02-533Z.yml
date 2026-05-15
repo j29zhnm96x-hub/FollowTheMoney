@@ -1,0 +1,53 @@
+- region "Home" [ref=e3]:
+  - generic [ref=e4]:
+    - button "History" [ref=e5] [cursor=pointer]
+    - heading "FollowTheMoney" [level=1] [ref=e6]
+    - button "Settings" [ref=e7] [cursor=pointer]:
+      - img [ref=e8]
+  - main [ref=e10]:
+    - generic [ref=e11]:
+      - text: Balance
+      - generic [ref=e12]: Budget mode
+    - generic "Balance" [ref=e13]: 4,248.00 €
+    - generic [ref=e14]:
+      - generic [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: Today
+        - generic [ref=e17]: +0.00 €
+        - generic [ref=e18]: "-0.00 €"
+      - generic [ref=e19] [cursor=pointer]:
+        - generic [ref=e20]: This week
+        - generic [ref=e21]: +4,500.00 €
+        - generic [ref=e22]: "-282.00 €"
+      - generic [ref=e23] [cursor=pointer]:
+        - generic [ref=e24]: This month
+        - generic [ref=e25]: +5,700.00 €
+        - generic [ref=e26]: "-1,452.00 €"
+    - generic "Recent transactions" [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: Groceries / Lidl
+          - generic [ref=e31]: 14/05/26
+        - generic [ref=e32]: 150.00 €
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]: Transport / ZET
+          - generic [ref=e36]: 13/05/26
+        - generic [ref=e37]: 52.00 €
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40]: Salary / Company
+          - generic [ref=e41]: 12/05/26
+        - generic [ref=e42]: 4,500.00 €
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]: Dining Out / Restaurant
+          - generic [ref=e46]: 11/05/26
+        - generic [ref=e47]: 80.00 €
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - generic [ref=e50]: Entertainment / Netflix
+          - generic [ref=e51]: 10/05/26
+        - generic [ref=e52]: 120.00 €
+  - generic [ref=e53]:
+    - button "Add income" [ref=e54] [cursor=pointer]
+    - button "Add expense" [ref=e55] [cursor=pointer]
