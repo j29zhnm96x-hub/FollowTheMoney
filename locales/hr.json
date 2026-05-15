@@ -151,6 +151,7 @@
   "unable_read_file": "Nije moguće pročitati odabranu datoteku.",
   "clear_all_confirm": "Obrisati sve podatke? Ovo će izbrisati sve transakcije i resetirati postavke. Ovo se ne može poništiti.",
   "delete_transaction_confirm": "Obrisati ovu transakciju?",
+  "delete_transaction": "Obriši transakciju",
   "amount_move_exceeds": "Iznos za premještanje ne može biti veći od iznosa transakcije.",
   "invalid_amount": "Neispravan iznos.",
   "transfer_failed": "Trenutno nije moguće premjestiti dio iznosa.",

@@ -23,6 +23,7 @@
   const noteContainer = $('#noteContainer');
   const noteInput = $('#noteInput');
   const btnMovePart = $('#btnMovePart');
+  const deleteBtn = $('#deleteBtn');
   const movePartContainer = $('#movePartContainer');
   const movePartSheetAmountEl = $('#movePartSheetAmount');
   const movePartRawDigits = $('#movePartRawDigits');
@@ -679,6 +680,7 @@
       unable_read_file: 'Unable to read the selected file.',
       clear_all_confirm: 'Clear all data? This will delete all transactions and reset settings. This cannot be undone.',
       delete_transaction_confirm: 'Delete this transaction?',
+      delete_transaction: 'Delete transaction',
       amount_move_exceeds: 'Amount to move cannot exceed the transaction amount.',
       invalid_amount: 'Invalid amount.',
       transfer_failed: 'Unable to transfer part of the amount right now.',
@@ -869,6 +871,7 @@
       unable_read_file: 'Nije moguće pročitati odabranu datoteku.',
       clear_all_confirm: 'Obrisati sve podatke? Ovo će izbrisati sve transakcije i resetirati postavke. Ovo se ne može poništiti.',
       delete_transaction_confirm: 'Obrisati ovu transakciju?',
+      delete_transaction: 'Obriši transakciju',
       amount_move_exceeds: 'Iznos za premještanje ne može biti veći od iznosa transakcije.',
       invalid_amount: 'Neispravan iznos.',
       transfer_failed: 'Trenutno nije moguće premjestiti dio iznosa.',
@@ -3524,6 +3527,10 @@
     if(btnMovePart){
       btnMovePart.hidden = !(sheetMode === 'edit' && !!existingTx);
     }
+    if(deleteBtn){
+      deleteBtn.hidden = !(sheetMode === 'edit' && !!existingTx);
+      if(!deleteBtn.hidden) deleteBtn.textContent = t('delete_transaction');
+    }
     closeMovePartOverlay();
     const baseDigits = existingTx ? String(Math.abs(existingTx.amountCents)) : '0';
     rawDigits.value=baseDigits; 
@@ -3603,6 +3610,7 @@
       delete sheetPanel.dataset.mode;
     }
     closeMovePartOverlay();
+    if(deleteBtn) deleteBtn.hidden = true;
     chipExpandedState.delete('sheet-category');
     chipExpandedState.delete('sheet-name');
     if(confirmBtn){
@@ -4533,6 +4541,19 @@
   }
   confirmBtn.addEventListener('click',handleConfirm);
   confirmBtn.addEventListener('touchend',handleConfirm);
+
+  if(deleteBtn){
+    deleteBtn.addEventListener('click',()=>{
+      if(!editingTransaction) return;
+      if(!confirm(t('delete_transaction_confirm'))) return;
+      deleteTx(editingTransaction.id).then(()=> closeSheet());
+    });
+    deleteBtn.addEventListener('touchend',()=>{
+      if(!editingTransaction) return;
+      if(!confirm(t('delete_transaction_confirm'))) return;
+      deleteTx(editingTransaction.id).then(()=> closeSheet());
+    });
+  }
 
   if(themeToggleEl){
     themeToggleEl.addEventListener('change',()=>{

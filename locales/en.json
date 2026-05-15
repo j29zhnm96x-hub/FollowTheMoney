@@ -160,6 +160,7 @@
   "unable_read_file": "Unable to read the selected file.",
   "clear_all_confirm": "Clear all data? This will delete all transactions and reset settings. This cannot be undone.",
   "delete_transaction_confirm": "Delete this transaction?",
+  "delete_transaction": "Delete transaction",
   "amount_move_exceeds": "Amount to move cannot exceed the transaction amount.",
   "invalid_amount": "Invalid amount.",
   "transfer_failed": "Unable to transfer part of the amount right now.",
