@@ -451,6 +451,7 @@
       const req = store.getAll();
       req.onsuccess = ()=> resolve(req.result.sort((a,b)=>b.createdAt-a.createdAt));
       req.onerror = ()=> reject(req.error);
+      tx.onabort = ()=> reject(tx.error);
     });
   }
   function dbAddTransaction(t){
@@ -460,6 +461,7 @@
       tx.objectStore(TX_STORE).put(t);
       tx.oncomplete = ()=> resolve();
       tx.onerror = ()=> reject(tx.error);
+      tx.onabort = ()=> reject(tx.error);
     });
   }
   function dbDeleteTransaction(id){
@@ -469,6 +471,7 @@
       tx.objectStore(TX_STORE).delete(id);
       tx.oncomplete = ()=> resolve();
       tx.onerror = ()=> reject(tx.error);
+      tx.onabort = ()=> reject(tx.error);
     });
   }
   function dbGetSettings(){
@@ -499,6 +502,7 @@
         }
       });
       req.onerror = ()=> reject(req.error);
+      tx.onabort = ()=> reject(tx.error);
     });
   }
   function dbSaveSettings(s){
@@ -511,6 +515,7 @@
       tx.objectStore(SETTINGS_STORE).put({ ...s, id:'settings' });
       tx.oncomplete = ()=>{ scheduleLocalBackup('settings-save'); resolve(); };
       tx.onerror = ()=> reject(tx.error);
+      tx.onabort = ()=> reject(tx.error);
     });
   }
 
@@ -2702,6 +2707,7 @@
       };
       tx.oncomplete = ()=> resolve();
       tx.onerror = ()=> reject(tx.error);
+      tx.onabort = ()=> reject(tx.error);
     });
   }
   async function handleExportShare(){
