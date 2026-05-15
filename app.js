@@ -3826,12 +3826,19 @@
     if(!settings.recurringEnabled || settings.recurringAmountCents<=0) return;
     const key = monthKey();
     if(settings.lastRecurringAppliedMonth === key) return;
+    const previousKey = settings.lastRecurringAppliedMonth;
+    settings.lastRecurringAppliedMonth = key;
+    dbSaveSettings(settings).then(()=>
       addTransaction(settings.recurringAmountCents,'Recurring Income',true,'Recurring Income','income','Recurring')
         .then(()=> Promise.all([
           ensureCollectionEntry('income','categories','Recurring'),
           ensureCollectionEntry('income','names','Recurring Income')
         ]))
-        .then(()=>{ settings.lastRecurringAppliedMonth = key; dbSaveSettings(settings); });
+        .catch(()=>{
+          settings.lastRecurringAppliedMonth = previousKey;
+          dbSaveSettings(settings);
+        })
+    );
   }
 
   function updateSheetAmount(){
