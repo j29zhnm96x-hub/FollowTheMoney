@@ -4454,7 +4454,6 @@
       if(sheetMode==='edit' && recurringToggle && recurringToggle.checked && frequencySelect){
         recurringFreq = frequencySelect.value;
       }
-      const isIncomeEntry = sheetType === 'income';
       const action = sheetMode==='edit'
         ? saveEditedTransaction(cents, cleanedNote, overrideDate, nameValue, categoryValue, recurringFreq)
         : addTransaction(cents,cleanedNote,false,nameValue, null, categoryValue);
@@ -4465,14 +4464,17 @@
           if(nameValue) promises.push(ensureCollectionEntry(sheetType,'names',nameValue));
           return Promise.all(promises);
         })
-        .then(()=> closeSheet())
-        .finally(()=>{
-          // Clear the processing flag after the DB work completes
-          confirmBtn.dataset.processing = '0';
-          // keep disabled until sheet resets/updateSheetAmount runs
-          confirmBtn.disabled = true;
-        }); 
+        .then(()=> closeSheet());
+      // Always clear processing flag after the action settles
+      action.finally(()=>{
+        confirmBtn.dataset.processing = '0';
+        confirmBtn.disabled = true;
+      });
+      return;
     }
+    // cents <= 0 — reset immediately to prevent permanent lock
+    confirmBtn.dataset.processing = '0';
+    confirmBtn.disabled = true;
   }
   confirmBtn.addEventListener('click',handleConfirm);
   confirmBtn.addEventListener('touchend',handleConfirm);
