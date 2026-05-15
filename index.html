@@ -69,7 +69,7 @@
       <div id="historyGroupSummary" class="group-summary" hidden></div>
       <div id="historyFilter" class="history-filter" hidden></div>
       <div class="history-chip-search" aria-label="Search filters">
-        <input id="historyChipSearch" type="text" class="text-input" placeholder="Search categories, names, or notes" autocomplete="off" />
+        <input id="historyChipSearch" type="text" class="text-input" placeholder="Search categories, names, or notes" autocomplete="off" maxlength="100" />
       </div>
       <div class="chip-row" id="categoryChipRow" aria-label="Categories"></div>
       <div class="chip-row" id="nameChipRow" aria-label="Names"></div>
@@ -598,7 +598,7 @@
           <div id="nameSuggestions" class="suggestion-row" hidden></div>
         </div>
         <div id="noteContainer" class="note-container" hidden>
-          <textarea id="noteInput" placeholder="Note (optional)"></textarea>
+          <textarea id="noteInput" placeholder="Note (optional)" maxlength="500"></textarea>
         </div>
         <button id="toggleNote" class="btn ghost full">Add note</button>
         <button id="btnMovePart" class="btn ghost full" hidden>Move a part of the amount to...</button>

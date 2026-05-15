@@ -439,7 +439,12 @@
           d.createObjectStore(SETTINGS_STORE,{ keyPath:'id' });
         }
       };
-      req.onsuccess = ()=> resolve(req.result);
+      req.onsuccess = ()=> {
+        const d = req.result;
+        // Close the DB when another tab requests a version upgrade
+        d.onversionchange = ()=> { d.close(); };
+        resolve(d);
+      };
       req.onerror = ()=> reject(req.error);
     });
   }
@@ -1604,6 +1609,11 @@
     if(graphColorCache.has(label)) return graphColorCache.get(label);
     const color = graphPalette[getGraphColorIndex(label)];
     graphColorCache.set(label,color);
+    // Prevent unbounded growth — prune oldest when over 200 entries
+    if(graphColorCache.size > 200){
+      const oldest = graphColorCache.keys().next().value;
+      if(oldest !== undefined) graphColorCache.delete(oldest);
+    }
     return color;
   }
   function getChipColor(label){
@@ -3039,6 +3049,13 @@
     return t.amountCents>0 ? t('income') : t('expense');
   }
 
+  // Persist exclusion choices across navigation — keyed by filter combination
+  const summaryExclusionStore = new Map();
+
+  function summaryFilterKey(){
+    return [historyTypeFilter || '', historyCategoryFilter || '', historyNameFilter || ''].join('|');
+  }
+
   function updateHistorySummary(list){
     if(!historyGroupSummaryEl) return;
     if(!list.length){
@@ -3067,6 +3084,18 @@
     historyGroupSummaryEl.appendChild(labelSpan);
     historyGroupSummaryEl.appendChild(sumSpan);
 
+    // Reuse excludedIds when filters are unchanged; start fresh when filters change
+    const fKey = summaryFilterKey();
+    if(!summaryExclusionStore.has(fKey)){
+      summaryExclusionStore.set(fKey, new Set());
+      // Keep store bounded — remove oldest entries beyond 10
+      if(summaryExclusionStore.size > 10){
+        const oldest = summaryExclusionStore.keys().next().value;
+        summaryExclusionStore.delete(oldest);
+      }
+    }
+    const excludedIds = summaryExclusionStore.get(fKey);
+
     historySummaryState = {
       label: labelSpan.textContent,
       totalCents,
@@ -3077,7 +3106,7 @@
         name: historyNameFilter
       },
       transactions: list.map(t=> ({ ...t })),
-      excludedIds: new Set()
+      excludedIds
     };
   }
 
@@ -4782,6 +4811,27 @@
   window.addEventListener('beforeunload', ()=> flushLocalBackup('beforeunload'));
   document.addEventListener('visibilitychange', ()=>{
     if(document.visibilityState === 'hidden') flushLocalBackup('visibility-hidden');
+  });
+  // Cross-tab sync: reload data when another tab saves to localStorage
+  window.addEventListener('storage', e=>{
+    if(e.key === 'ftm_offline_backup_v1' || e.key === UPDATE_FLAG_KEY){
+      const warm = readLocalBackup();
+      if(warm) applyBackupSnapshot(warm);
+      // Also re-read from IndexedDB to ensure consistency
+      if(db){
+        Promise.all([dbGetAllTransactions(), dbGetSettings()]).then(([txs,s])=>{
+          transactions=txs;
+          settings={...settings,...s};
+          setLanguage(settings.language || 'en', false);
+          updateBalance();
+          renderRecent();
+          if(!historyScreen.hidden) renderHistory();
+          syncSettingsUI();
+          updateSeasonalStats();
+          refreshGraphIfVisible();
+        }).catch(err=> console.error('Cross-tab sync error', err));
+      }
+    }
   });
 
   // Prevent quick double-tap from triggering zoom on some mobile browsers.
