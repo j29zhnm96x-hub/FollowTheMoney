@@ -4064,7 +4064,12 @@
   if(btnHelpManual) btnHelpManual.addEventListener('click', ()=>{ openHelp(); });
   if(btnSummaryBack) btnSummaryBack.addEventListener('click', closeSummaryScreen);
   $('#btnHistory').addEventListener('click',()=>{ 
-    historyFilter = null; // clear filter
+    historyFilter = null; // clear time-period filter
+    historyCategoryFilter = null;
+    historyNameFilter = null;
+    historyTypeFilter = 'all';
+    refreshCategoryOptions();
+    refreshNameOptions();
     homeScreen.classList.remove('active'); 
     homeScreen.hidden=true; 
     historyScreen.hidden=false; 
@@ -4693,11 +4698,17 @@
     card.addEventListener('click',()=>{
       const period = card.dataset.period;
       historyFilter = period; // 'day', 'week', or 'month'
+      historyCategoryFilter = null;
+      historyNameFilter = null;
+      historyTypeFilter = 'all';
+      refreshCategoryOptions();
+      refreshNameOptions();
       homeScreen.classList.remove('active');
       homeScreen.hidden = true;
       historyScreen.hidden = false;
       historyScreen.classList.add('active');
       currentScreen = 'history';
+      renderFilterChips();
       renderHistory();
       syncGraphScreenVisibility();
     });
