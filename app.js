@@ -35,7 +35,7 @@
   const movePartBackBtn = $('#movePartBack');
   const settingsModal = $('#settingsModal');
   const helpModal = $('#helpModal');
-  const themeToggleEl = $('#themeToggle');
+  // themeToggleEl removed — now handled by theme buttons
   const btnClearAll = $('#btnClearAll');
   const btnAddIncome = $('#btnAddIncome');
   const btnAddExpense = $('#btnAddExpense');
@@ -134,6 +134,8 @@
     recurringAmountCents:0, 
     lastRecurringAppliedMonth:null, 
     theme: 'light',
+    themeLat: null,
+    themeLng: null,
     seasonalMode: false,
     seasonStart: null,
     seasonEnd: null,
@@ -489,6 +491,8 @@
         recurringAmountCents:0, 
         lastRecurringAppliedMonth:null,
         theme: 'light',
+        themeLat: null,
+        themeLng: null,
         seasonalMode: false,
         seasonStart: null,
         seasonEnd: null,
@@ -2021,7 +2025,7 @@
     resizeTimelineCanvas();
     const ctx = timelineCanvas.getContext('2d');
     if(!ctx) return;
-    const isLightTheme = document.documentElement.classList.contains('theme-light');
+    const isLightTheme = document.documentElement.dataset.theme === 'light';
     const gridColor = isLightTheme ? 'rgba(35,30,55,0.15)' : 'rgba(255,255,255,0.08)';
     const axisLabelColor = isLightTheme ? 'rgba(32,24,48,0.7)' : 'rgba(255,255,255,0.7)';
     const axisValueColor = isLightTheme ? 'rgba(32,24,48,0.65)' : 'rgba(255,255,255,0.65)';
@@ -2666,6 +2670,8 @@
       recurringAmountCents:0,
       lastRecurringAppliedMonth:null,
       theme:'light',
+      themeLat:null,
+      themeLng:null,
       seasonStart:null,
       seasonEnd:null,
       seasonIncomeCents:0,
@@ -3652,13 +3658,7 @@
   function openHelp(){ if(helpModal) helpModal.hidden = false; }
   function closeHelp(){ if(helpModal) helpModal.hidden = true; }
 
-  function applyTheme(theme){
-    const html = document.documentElement;
-    html.classList.remove('theme-light','theme-dark');
-    if(theme === 'light') html.classList.add('theme-light');
-    else if(theme === 'dark') html.classList.add('theme-dark');
-    // if theme is undefined/null -> fall back to system/default
-  }
+  // applyTheme is now imported from theme.js
 
   function applyButtonMode(){
     const singleMode = !!settings.singleButtonMode;
@@ -3671,8 +3671,8 @@
   }
 
   function syncSettingsUI(){
-    // theme toggle: checked = light theme
-    if(themeToggleEl) themeToggleEl.checked = settings.theme === 'light';
+    // theme buttons
+    updateThemeButtons();
     if(dateFormatEl) dateFormatEl.value = settings.dateFormat || 'dmy';
     if(currencySymbolInput) currencySymbolInput.value = settings.currencySymbol || '€';
     if(languageSelectEl) languageSelectEl.value = settings.language || 'en';
@@ -3684,7 +3684,7 @@
     refreshCategoryOptions();
     refreshNameOptions();
     renderFilterChips();
-    applyTheme(settings.theme);
+    applyTheme(settings.theme, settings.themeLat, settings.themeLng);
     applyButtonMode();
 
     // seasonal fields
@@ -4567,10 +4567,73 @@
     deleteBtn.addEventListener('touchend', handleDelete);
   }
 
-  if(themeToggleEl){
-    themeToggleEl.addEventListener('change',()=>{
-      settings.theme = themeToggleEl.checked ? 'light' : 'dark';
-      dbSaveSettings(settings).then(()=> applyTheme(settings.theme));
+  // Theme buttons
+  const themeButtonsContainer = document.getElementById('themeButtons');
+  if(themeButtonsContainer){
+    themeButtonsContainer.addEventListener('click', function(e){
+      const btn = e.target.closest('.theme-btn');
+      if(!btn) return;
+      const mode = btn.dataset.themeMode;
+      if(!mode) return;
+      if(mode === 'dynamic'){
+        if(settings.themeLat && settings.themeLng){
+          settings.theme = 'dynamic';
+          dbSaveSettings(settings).then(()=>{
+            applyTheme('dynamic', settings.themeLat, settings.themeLng);
+            updateThemeButtons();
+          });
+          return;
+        }
+        // Request GPS
+        if(navigator.geolocation){
+          navigator.geolocation.getCurrentPosition(
+            function(pos){
+              settings.theme = 'dynamic';
+              settings.themeLat = pos.coords.latitude;
+              settings.themeLng = pos.coords.longitude;
+              dbSaveSettings(settings).then(()=>{
+                applyTheme('dynamic', settings.themeLat, settings.themeLng);
+                updateThemeButtons();
+              });
+            },
+            function(){
+              // GPS denied/failed — use fallback without coords
+              settings.theme = 'dynamic';
+              delete settings.themeLat;
+              delete settings.themeLng;
+              dbSaveSettings(settings).then(()=>{
+                applyTheme('dynamic', null, null);
+                updateThemeButtons();
+              });
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        } else {
+          settings.theme = 'dynamic';
+          delete settings.themeLat;
+          delete settings.themeLng;
+          dbSaveSettings(settings).then(()=>{
+            applyTheme('dynamic', null, null);
+            updateThemeButtons();
+          });
+        }
+        return;
+      }
+      settings.theme = mode;
+      delete settings.themeLat;
+      delete settings.themeLng;
+      dbSaveSettings(settings).then(()=>{
+        applyTheme(settings.theme, null, null);
+        updateThemeButtons();
+      });
+    });
+  }
+
+  function updateThemeButtons(){
+    const container = document.getElementById('themeButtons');
+    if(!container) return;
+    container.querySelectorAll('.theme-btn').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.themeMode === settings.theme);
     });
   }
 
@@ -4741,6 +4804,8 @@
         recurringAmountCents:0,
         lastRecurringAppliedMonth:null,
         theme: 'light',
+        themeLat: null,
+        themeLng: null,
         seasonalMode: false,
         seasonStart:null,
         seasonEnd:null,

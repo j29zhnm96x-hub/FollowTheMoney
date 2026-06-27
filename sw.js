@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const CACHE_NAME = `followthemoney-static-${CACHE_VERSION}`;
 const CORE_ASSETS = [
   './',
@@ -6,6 +6,7 @@ const CORE_ASSETS = [
   './styles.css',
   './app.js',
   './seasonal.js',
+  './theme.js',
   './manifest.json',
   './locales/en.json',
   './locales/hr.json',
