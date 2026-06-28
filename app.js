@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '4';
+const APP_VERSION = '5';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -1273,6 +1273,8 @@ const APP_VERSION = '4';
     if(settingsTitle) settingsTitle.textContent = t('nav_settings');
     const helpBtn = $('#btnHelpManual');
     if(helpBtn) helpBtn.textContent = t('help_support');
+    const appVerEl = document.querySelector('.app-version');
+    if(appVerEl) appVerEl.textContent = `v${APP_VERSION}`;
     const closeSettingsBtn = document.querySelector('#settingsModal [data-dismiss].btn');
     if(closeSettingsBtn) closeSettingsBtn.textContent = t('close');
     const generalHeading = $('#generalHeading');
@@ -5052,6 +5054,11 @@ const APP_VERSION = '4';
   registerServiceWorker();
 
   setInterval(()=> updateSeasonalStats(), 30 * 60 * 1000);
+
+  // Check for updates when app comes to foreground
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible') checkForUpdates(false);
+  });
 
   window.addEventListener('beforeunload', ()=> flushLocalBackup('beforeunload'));
   document.addEventListener('visibilitychange', ()=>{

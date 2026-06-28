@@ -5,10 +5,10 @@ const APP_SHELL = [
   './index.html',
   './manifest.json',
   './version.json',
-  './styles.css?v=2',
-  './app.js?v=2',
-  './theme.js?v=2',
-  './seasonal.js?v=2',
+  './styles.css?v=3',
+  './app.js?v=3',
+  './theme.js?v=3',
+  './seasonal.js?v=3',
   './img/favicon.png?v=2',
   './favicon.ico'
 ];
