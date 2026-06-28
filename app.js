@@ -3954,10 +3954,15 @@ const APP_VERSION = '5';
 
     // Dashboard grid (D/W/M)
     if(dashboardGridEl){
+      const homeScreen = document.getElementById('screen-home');
       if(settings.seasonalMode && window.SeasonalLogic){
         // Season is active — cards are useless during work, hide them
         if(result.phase && result.phase.isSeasonActive){
           dashboardGridEl.hidden = true;
+          if(homeScreen){
+            homeScreen.style.paddingBottom = '0';
+            homeScreen.classList.add('season-active');
+          }
         }
         // Off-season — show allowance cards so user knows daily/weekly/monthly budget
         else if(result.phase && result.phase.hasSeason && result.phase.isOffSeason){
@@ -3966,10 +3971,18 @@ const APP_VERSION = '5';
           updateDashboardCard('week', t('weekly'), formatCurrency(result.weeklyAllowance || 0), formatCurrency(spent.weeklySpent || 0));
           updateDashboardCard('month', t('monthly'), formatCurrency(result.monthlyAllowance || 0), formatCurrency(spent.monthlySpent || 0));
           dashboardGridEl.hidden = false;
+          if(homeScreen){
+            homeScreen.style.paddingBottom = '';
+            homeScreen.classList.remove('season-active');
+          }
         }
         // No season set or other state — hide
         else {
           dashboardGridEl.hidden = true;
+          if(homeScreen){
+            homeScreen.style.paddingBottom = '';
+            homeScreen.classList.remove('season-active');
+          }
         }
       } else {
         // Budget mode: show Today/This Week/This Month income & expenses
@@ -3978,6 +3991,10 @@ const APP_VERSION = '5';
         updateDashboardCardBudgetMode('week', t('this_week'), budget.week);
         updateDashboardCardBudgetMode('month', t('this_month'), budget.month);
         dashboardGridEl.hidden = false;
+        if(homeScreen){
+          homeScreen.style.paddingBottom = '';
+          homeScreen.classList.remove('season-active');
+        }
       }
     }
 
