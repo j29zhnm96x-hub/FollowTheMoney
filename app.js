@@ -1,4 +1,6 @@
 /* FollowTheMoney vanilla JS */
+const APP_VERSION = '1';
+
 (function(){
   const $ = sel => document.querySelector(sel);
   const balanceEl = $('#balance');
@@ -63,6 +65,9 @@
   const historyChipSearchInput = $('#historyChipSearch');
   const btnSeasonFilter = $('#btnSeasonFilter');
   const historyGroupSummaryEl = $('#historyGroupSummary');
+  const updateToast = $('#updateToast');
+  const updateToastMsg = $('#updateToastMsg');
+  const btnCheckUpdates = $('#btnCheckUpdates');
   const summaryScreen = $('#screen-summary');
   const summaryLabelEl = $('#summaryLabel');
   const summaryCountEl = $('#summaryCount');
@@ -530,6 +535,54 @@
       tx.onerror = ()=> reject(tx.error);
       tx.onabort = ()=> reject(tx.error);
     });
+  }
+
+  async function checkForUpdates(manual=false){
+    if(manual && btnCheckUpdates){
+      btnCheckUpdates.textContent = t('checking') || 'Checking...';
+      btnCheckUpdates.disabled = true;
+    }
+    try {
+      const res = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+      if(!res.ok) throw new Error('fetch failed');
+      const data = await res.json();
+      if(data.version && String(data.version) !== String(APP_VERSION)){
+        showUpdateToast();
+        return 'update-available';
+      }
+    } catch(err) {
+      console.warn('Update check failed', err);
+    }
+    // Also try SW update as secondary signal
+    if('serviceWorker' in navigator){
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.update();
+      } catch(_){ /* ignore */ }
+    }
+    if(manual && btnCheckUpdates){
+      btnCheckUpdates.textContent = t('check_updates') || 'Check for Updates';
+      btnCheckUpdates.disabled = false;
+    }
+    return 'up-to-date';
+  }
+
+  function showUpdateToast(){
+    if(!updateToast) return;
+    updateToast.hidden = false;
+    if(updateToastMsg) updateToastMsg.textContent = t('update_available') || 'New version available';
+    requestAnimationFrame(()=> updateToast.classList.add('visible'));
+  }
+
+  function hideUpdateToast(){
+    if(!updateToast) return;
+    updateToast.classList.remove('visible');
+    setTimeout(()=>{ updateToast.hidden = true; }, 300);
+  }
+
+  function applyUpdate(){
+    hideUpdateToast();
+    window.location.reload();
   }
 
   // i18n
@@ -4670,6 +4723,15 @@
     });
   }
 
+  if(btnCheckUpdates){
+    btnCheckUpdates.addEventListener('click', ()=> checkForUpdates(true));
+  }
+
+  const btnUpdateReload = $('#btnUpdateReload');
+  const btnUpdateDismiss = $('#btnUpdateDismiss');
+  if(btnUpdateReload) btnUpdateReload.addEventListener('click', applyUpdate);
+  if(btnUpdateDismiss) btnUpdateDismiss.addEventListener('click', hideUpdateToast);
+
   if(singleButtonModeToggle){
     singleButtonModeToggle.addEventListener('change',()=>{
       settings.singleButtonMode = singleButtonModeToggle.checked;
@@ -4903,6 +4965,10 @@
       refreshGraphIfVisible();
     })
     .then(()=> scheduleLocalBackup('db-init'))
+    .then(()=>{
+      // Auto-check for updates after app is fully loaded
+      setTimeout(()=> checkForUpdates(false), 5000);
+    })
     .catch(err=>{
       console.error('DB init error', err);
       if(!warmBackup){

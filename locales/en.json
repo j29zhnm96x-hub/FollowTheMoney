@@ -182,5 +182,9 @@
 
   "start_of_working_season": "Start of working season",
   "end_of_working_season": "End of working season",
-  "save_season_dates": "Save Season Dates"
+  "save_season_dates": "Save Season Dates",
+
+  "checking": "Checking...",
+  "check_updates": "Check for Updates",
+  "update_available": "New version available"
 }

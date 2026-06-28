@@ -188,5 +188,9 @@
 
   "start_of_working_season": "Početak radne sezone",
   "end_of_working_season": "Kraj radne sezone",
-  "save_season_dates": "Spremi datume sezone"
+  "save_season_dates": "Spremi datume sezone",
+
+  "checking": "Provjera...",
+  "check_updates": "Provjeri ažuriranja",
+  "update_available": "Dostupna nova verzija"
 }

@@ -344,10 +344,10 @@
                 <h3 id="advancedHeading">Advanced</h3>
                 <p class="card-subtitle">Reset the app if you need a clean slate.</p>
               </div>
-              <div class="advanced-group">
-                <button id="btnClearAll" class="btn danger">Clear All Data</button>
-                <div class="preview small">Clears all transactions and resets settings. A confirmation will appear when you press the button.</div>
-              </div>
+              <button id="btnCheckUpdates" class="btn accent">Check for Updates</button>
+              <div class="preview small">Manually check if a newer version is available on the server.</div>
+              <button id="btnClearAll" class="btn danger">Clear All Data</button>
+              <div class="preview small">Clears all transactions and resets settings. A confirmation will appear when you press the button.</div>
             </section>
           </div>
           <div class="settings-actions">
@@ -662,5 +662,10 @@
   </div>
   <script src="seasonal.js?v=2" defer></script>
   <script src="app.js?v=2" defer></script>
+  <div id="updateToast" class="update-toast" hidden>
+    <span id="updateToastMsg">New version available</span>
+    <button id="btnUpdateReload" class="btn accent">Reload</button>
+    <button id="btnUpdateDismiss" class="btn ghost" aria-label="Dismiss">✕</button>
+  </div>
 </body>
 </html>
