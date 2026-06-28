@@ -3953,14 +3953,20 @@ const APP_VERSION = '1';
     // Dashboard grid (D/W/M)
     if(dashboardGridEl){
       if(settings.seasonalMode && window.SeasonalLogic){
-        // Seasonal mode: show allowances and spent
-        const spent = window.SeasonalLogic.computeSpent(transactions, Date.now());
-        if(result.phase && result.phase.hasSeason && result.phase.isOffSeason){
+        // Season is active — cards are useless during work, hide them
+        if(result.phase && result.phase.isSeasonActive){
+          dashboardGridEl.hidden = true;
+        }
+        // Off-season — show allowance cards so user knows daily/weekly/monthly budget
+        else if(result.phase && result.phase.hasSeason && result.phase.isOffSeason){
+          const spent = window.SeasonalLogic.computeSpent(transactions, Date.now());
           updateDashboardCard('day', t('daily'), formatCurrency(result.dailyAllowance || 0), formatCurrency(spent.dailySpent || 0));
           updateDashboardCard('week', t('weekly'), formatCurrency(result.weeklyAllowance || 0), formatCurrency(spent.weeklySpent || 0));
           updateDashboardCard('month', t('monthly'), formatCurrency(result.monthlyAllowance || 0), formatCurrency(spent.monthlySpent || 0));
           dashboardGridEl.hidden = false;
-        } else {
+        }
+        // No season set or other state — hide
+        else {
           dashboardGridEl.hidden = true;
         }
       } else {
