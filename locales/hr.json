@@ -192,5 +192,8 @@
 
   "checking": "Provjera...",
   "check_updates": "Provjeri ažuriranja",
-  "update_available": "Dostupna nova verzija"
+  "update_available": "Dostupna nova verzija",
+  "up_to_date": "Već ažurirano",
+  "check_failed": "Nije moguće provjeriti ažuriranja",
+  "updated_successfully": "Uspješno ažurirano"
 }

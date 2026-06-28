@@ -186,5 +186,8 @@
 
   "checking": "Checking...",
   "check_updates": "Check for Updates",
-  "update_available": "New version available"
+  "update_available": "New version available",
+  "up_to_date": "Already up to date",
+  "check_failed": "Could not check for updates",
+  "updated_successfully": "Updated successfully"
 }

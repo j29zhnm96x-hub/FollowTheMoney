@@ -68,6 +68,8 @@ const APP_VERSION = '1';
   const updateToast = $('#updateToast');
   const updateToastMsg = $('#updateToastMsg');
   const btnCheckUpdates = $('#btnCheckUpdates');
+  const notifyToast = $('#notifyToast');
+  const notifyToastMsg = $('#notifyToastMsg');
   const summaryScreen = $('#screen-summary');
   const summaryLabelEl = $('#summaryLabel');
   const summaryCountEl = $('#summaryCount');
@@ -548,10 +550,21 @@ const APP_VERSION = '1';
       const data = await res.json();
       if(data.version && String(data.version) !== String(APP_VERSION)){
         showUpdateToast();
+        if(manual && btnCheckUpdates){
+          btnCheckUpdates.textContent = t('check_updates') || 'Check for Updates';
+          btnCheckUpdates.disabled = false;
+        }
         return 'update-available';
+      }
+      // Up to date
+      if(manual){
+        showNotification(t('up_to_date') || 'Already up to date', 'success');
       }
     } catch(err) {
       console.warn('Update check failed', err);
+      if(manual){
+        showNotification(t('check_failed') || 'Could not check for updates', 'error');
+      }
     }
     // Also try SW update as secondary signal
     if('serviceWorker' in navigator){
@@ -582,7 +595,22 @@ const APP_VERSION = '1';
 
   function applyUpdate(){
     hideUpdateToast();
+    try { sessionStorage.setItem('ftm-updated','1'); } catch(_){}
     window.location.reload();
+  }
+
+  let notifyTimer = null;
+  function showNotification(message, type=''){
+    if(!notifyToast || !notifyToastMsg) return;
+    notifyToastMsg.textContent = message;
+    notifyToast.className = 'notify-toast' + (type ? ' notify-'+type : '');
+    notifyToast.hidden = false;
+    if(notifyTimer) clearTimeout(notifyTimer);
+    requestAnimationFrame(()=> notifyToast.classList.add('visible'));
+    notifyTimer = setTimeout(()=>{
+      notifyToast.classList.remove('visible');
+      setTimeout(()=>{ notifyToast.hidden = true; }, 300);
+    }, 2500);
   }
 
   // i18n
@@ -4966,6 +4994,13 @@ const APP_VERSION = '1';
     })
     .then(()=> scheduleLocalBackup('db-init'))
     .then(()=>{
+      // Show "Updated successfully" if we just reloaded from an update
+      try {
+        if(sessionStorage.getItem('ftm-updated') === '1'){
+          sessionStorage.removeItem('ftm-updated');
+          setTimeout(()=> showNotification(t('updated_successfully') || 'Updated successfully', 'success'), 600);
+        }
+      } catch(_){}
       // Auto-check for updates after app is fully loaded
       setTimeout(()=> checkForUpdates(false), 5000);
     })
