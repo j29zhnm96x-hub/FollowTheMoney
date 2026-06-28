@@ -5057,7 +5057,7 @@ const APP_VERSION = '7';
         }
       });
     };
-    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg=>{
+    navigator.serviceWorker.register('sw.js?v=4', { updateViaCache: 'none' }).then(reg=>{
       if(reg.installing) monitorInstalling(reg.installing);
       reg.addEventListener('updatefound', ()=> monitorInstalling(reg.installing));
     }).catch(err=> console.error('SW registration failed', err));
