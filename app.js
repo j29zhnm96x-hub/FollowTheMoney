@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '5';
+const APP_VERSION = '6';
 
 (function(){
   const $ = sel => document.querySelector(sel);
