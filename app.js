@@ -128,7 +128,7 @@
   let historyNameFilter = null;
   let historyChipSearchText = '';
   let historySummaryState = null;
-  let summaryPressTimer = null;
+
   let previousSummaryReturnScreen = 'history';
   let settings = { 
     recurringEnabled:false, 
@@ -3094,8 +3094,22 @@
     const totalCents = list.reduce((sum,t)=> sum + t.amountCents, 0);
     sumSpan.textContent = formatCurrency(totalCents);
 
+    const infoBtn = document.createElement('button');
+    infoBtn.className = 'sum-info';
+    infoBtn.textContent = 'ⓘ';
+    infoBtn.title = t('summary_preview');
+    infoBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openSummaryScreen();
+    });
+
+    const rightGroup = document.createElement('div');
+    rightGroup.className = 'right-group';
+    rightGroup.appendChild(sumSpan);
+    rightGroup.appendChild(infoBtn);
+
     historyGroupSummaryEl.appendChild(labelSpan);
-    historyGroupSummaryEl.appendChild(sumSpan);
+    historyGroupSummaryEl.appendChild(rightGroup);
 
     // Reuse excludedIds when filters are unchanged; start fresh when filters change
     const fKey = summaryFilterKey();
@@ -4106,25 +4120,7 @@
     renderRecent();
     syncGraphScreenVisibility();
   });
-  if(historyGroupSummaryEl){
-    const beginSummaryPress = ()=>{
-      if(summaryPressTimer || !historySummaryState) return;
-      summaryPressTimer = setTimeout(()=>{
-        summaryPressTimer = null;
-        openSummaryScreen();
-      }, 2000);
-    };
-    const cancelSummaryPress = ()=>{
-      if(summaryPressTimer){
-        clearTimeout(summaryPressTimer);
-        summaryPressTimer = null;
-      }
-    };
-    historyGroupSummaryEl.addEventListener('pointerdown', beginSummaryPress);
-    historyGroupSummaryEl.addEventListener('pointerup', cancelSummaryPress);
-    historyGroupSummaryEl.addEventListener('pointerleave', cancelSummaryPress);
-    historyGroupSummaryEl.addEventListener('pointercancel', cancelSummaryPress);
-  }
+
   toggleNoteBtn.addEventListener('click',()=>{
     if(noteContainer.hidden){
       noteContainer.hidden=false;

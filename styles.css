@@ -1156,3 +1156,31 @@ html[data-theme='light'] .group-summary { box-shadow:0 12px 28px rgba(0,0,0,.12)
   border-color: var(--accent);
   opacity: 1;
 }
+
+/* Info button on history summary pill */
+.group-summary .right-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.group-summary .sum-info {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.group-summary .sum-info:active {
+  transform: scale(0.88);
+  background: rgba(255,255,255,0.1);
+}
