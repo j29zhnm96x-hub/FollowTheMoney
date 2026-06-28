@@ -61,6 +61,7 @@
   const categoryChipRow = $('#categoryChipRow');
   const nameChipRow = $('#nameChipRow');
   const historyChipSearchInput = $('#historyChipSearch');
+  const btnSeasonFilter = $('#btnSeasonFilter');
   const historyGroupSummaryEl = $('#historyGroupSummary');
   const summaryScreen = $('#screen-summary');
   const summaryLabelEl = $('#summaryLabel');
@@ -136,6 +137,7 @@
     theme: 'light',
     themeLat: null,
     themeLng: null,
+    historySeasonFilter: false,
     seasonalMode: false,
     seasonStart: null,
     seasonEnd: null,
@@ -493,6 +495,7 @@
         theme: 'light',
         themeLat: null,
         themeLng: null,
+        historySeasonFilter: false,
         seasonalMode: false,
         seasonStart: null,
         seasonEnd: null,
@@ -2672,6 +2675,7 @@
       theme:'light',
       themeLat:null,
       themeLng:null,
+      historySeasonFilter: false,
       seasonStart:null,
       seasonEnd:null,
       seasonIncomeCents:0,
@@ -3216,10 +3220,24 @@
     if(historySearchQuery){
       filteredTxs = filteredTxs.filter(t=> includesSearchText(getTransactionSearchText(t), historySearchQuery));
     }
+    if(settings.historySeasonFilter && settings.seasonStart && settings.seasonEnd){
+      const seasonStart = new Date(settings.seasonStart);
+      seasonStart.setHours(0, 0, 0, 0);
+      const seasonEnd = new Date(settings.seasonEnd);
+      seasonEnd.setHours(23, 59, 59, 999);
+      filteredTxs = filteredTxs.filter(t => t.createdAt >= seasonStart.getTime() && t.createdAt <= seasonEnd.getTime());
+    }
     if(historyFilterEl){
+      const parts = [];
       if(historyFilter){
         const labels = {day:t('today'),week:t('this_week'),month:t('this_month')};
-        historyFilterEl.textContent = `${t('showing_prefix')} ${labels[historyFilter] || t('all')}`;
+        parts.push(labels[historyFilter] || t('all'));
+      }
+      if(settings.historySeasonFilter){
+        parts.push(t('show_only_season'));
+      }
+      if(parts.length > 0){
+        historyFilterEl.textContent = `${t('showing_prefix')} ${parts.join(' · ')}`;
         historyFilterEl.hidden = false;
       } else {
         historyFilterEl.hidden = true;
@@ -3685,6 +3703,7 @@
     refreshNameOptions();
     renderFilterChips();
     applyTheme(settings.theme, settings.themeLat, settings.themeLng);
+    updateSeasonFilterButton();
     applyButtonMode();
 
     // seasonal fields
@@ -4637,6 +4656,24 @@
     });
   }
 
+  function updateSeasonFilterButton(){
+    if(!btnSeasonFilter) return;
+    const hasSeason = settings.seasonalMode && settings.seasonStart && settings.seasonEnd;
+    btnSeasonFilter.hidden = !hasSeason;
+    btnSeasonFilter.classList.toggle('active', !!settings.historySeasonFilter);
+    btnSeasonFilter.textContent = settings.historySeasonFilter ? t('show_only_season') : t('all_time');
+  }
+
+  if(btnSeasonFilter){
+    btnSeasonFilter.addEventListener('click', ()=>{
+      settings.historySeasonFilter = !settings.historySeasonFilter;
+      dbSaveSettings(settings).then(()=>{
+        renderHistory();
+        updateSeasonFilterButton();
+      });
+    });
+  }
+
   if(singleButtonModeToggle){
     singleButtonModeToggle.addEventListener('change',()=>{
       settings.singleButtonMode = singleButtonModeToggle.checked;
@@ -4806,6 +4843,7 @@
         theme: 'light',
         themeLat: null,
         themeLng: null,
+        historySeasonFilter: false,
         seasonalMode: false,
         seasonStart:null,
         seasonEnd:null,
