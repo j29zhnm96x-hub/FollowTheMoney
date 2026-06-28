@@ -105,7 +105,6 @@ html, body, .app, .screen, .top-bar, .transaction, .recent-item, .balance, .logo
 .balance-label { margin-bottom:.5rem; font-size:.9rem; text-transform:uppercase; letter-spacing:1px; font-weight:500; color:var(--muted); }
 .badge { display:inline-block; margin-left:.5rem; padding:.2rem .5rem; font-size:.65rem; font-weight:800; letter-spacing:.3px; border-radius:999px; background:var(--panel); border:1px solid var(--panel-border); vertical-align:middle; color:var(--fg); }
 .recent-list { width:100%; max-width:560px; margin-top:0.9rem; display:flex; flex-direction:column; gap:0.45rem; padding:0 1rem; }
-.dashboard-grid[hidden] ~ .recent-list { margin-top:auto; margin-bottom:auto; }
 .dashboard-grid { width:100%; max-width:560px; margin:0.9rem auto 0; display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; padding:0 1rem; }
 .dashboard-grid[hidden] { display:none !important; }
 .dashboard-card { background:var(--panel); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:1px solid var(--panel-border); border-radius:14px; padding:.75rem .5rem; display:flex; flex-direction:column; align-items:center; gap:.3rem; cursor:pointer; transition:all .2s ease; touch-action:manipulation; }

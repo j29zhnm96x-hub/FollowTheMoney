@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '6';
+const APP_VERSION = '7';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -3954,15 +3954,11 @@ const APP_VERSION = '6';
 
     // Dashboard grid (D/W/M)
     if(dashboardGridEl){
-      const homeScreen = document.getElementById('screen-home');
       if(settings.seasonalMode && window.SeasonalLogic){
         // Season is active — cards are useless during work, hide them
         if(result.phase && result.phase.isSeasonActive){
           dashboardGridEl.hidden = true;
-          if(homeScreen){
-            homeScreen.style.paddingBottom = '0';
-            homeScreen.classList.add('season-active');
-          }
+          centerRecentList();
         }
         // Off-season — show allowance cards so user knows daily/weekly/monthly budget
         else if(result.phase && result.phase.hasSeason && result.phase.isOffSeason){
@@ -3971,18 +3967,12 @@ const APP_VERSION = '6';
           updateDashboardCard('week', t('weekly'), formatCurrency(result.weeklyAllowance || 0), formatCurrency(spent.weeklySpent || 0));
           updateDashboardCard('month', t('monthly'), formatCurrency(result.monthlyAllowance || 0), formatCurrency(spent.monthlySpent || 0));
           dashboardGridEl.hidden = false;
-          if(homeScreen){
-            homeScreen.style.paddingBottom = '';
-            homeScreen.classList.remove('season-active');
-          }
+          resetRecentListPosition();
         }
         // No season set or other state — hide
         else {
           dashboardGridEl.hidden = true;
-          if(homeScreen){
-            homeScreen.style.paddingBottom = '';
-            homeScreen.classList.remove('season-active');
-          }
+          resetRecentListPosition();
         }
       } else {
         // Budget mode: show Today/This Week/This Month income & expenses
@@ -3991,10 +3981,7 @@ const APP_VERSION = '6';
         updateDashboardCardBudgetMode('week', t('this_week'), budget.week);
         updateDashboardCardBudgetMode('month', t('this_month'), budget.month);
         dashboardGridEl.hidden = false;
-        if(homeScreen){
-          homeScreen.style.paddingBottom = '';
-          homeScreen.classList.remove('season-active');
-        }
+        resetRecentListPosition();
       }
     }
 
@@ -4012,6 +3999,22 @@ const APP_VERSION = '6';
         seasonBadgeEl.hidden = true;
       }
     }
+  }
+
+  function centerRecentList(){
+    if(!recentListEl || !balanceEl) return;
+    const balanceBottom = balanceEl.getBoundingClientRect().bottom;
+    const fb = document.querySelector('.float-buttons');
+    const buttonsTop = fb ? fb.getBoundingClientRect().top : window.innerHeight;
+    const listHeight = recentListEl.scrollHeight;
+    const gapPx = Math.max(6, (buttonsTop - balanceBottom - listHeight) / 2);
+    recentListEl.style.marginTop = (gapPx / 16) + 'rem';
+    recentListEl.style.marginBottom = '0';
+  }
+
+  function resetRecentListPosition(){
+    if(!recentListEl) return;
+    recentListEl.style.marginTop = '';
   }
 
   function applyRecurringIfNeeded(){
@@ -4225,6 +4228,7 @@ const APP_VERSION = '6';
     currentScreen = 'home';
     renderRecent();
     syncGraphScreenVisibility();
+    if(dashboardGridEl && dashboardGridEl.hidden) centerRecentList();
   });
 
   toggleNoteBtn.addEventListener('click',()=>{
@@ -5016,6 +5020,8 @@ const APP_VERSION = '6';
       syncSettingsUI();
       updateSeasonalStats();
       refreshGraphIfVisible();
+      renderRecent();
+      if(dashboardGridEl && dashboardGridEl.hidden) centerRecentList();
     })
     .then(()=> scheduleLocalBackup('db-init'))
     .then(()=>{
