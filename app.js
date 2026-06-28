@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '3';
+const APP_VERSION = '4';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -3111,7 +3111,7 @@ const APP_VERSION = '3';
   function renderRecent(){
     if(!recentListEl) return;
     recentListEl.innerHTML = '';
-    const list = transactions.slice(0,5);
+    const list = transactions.slice(0,7);
     if(list.length===0){
       const e = document.createElement('div'); e.className='empty'; e.textContent=t('no_recent_entries'); recentListEl.appendChild(e); return;
     }
