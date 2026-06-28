@@ -4891,7 +4891,7 @@
         }
       });
     };
-    navigator.serviceWorker.register('sw.js').then(reg=>{
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg=>{
       if(reg.installing) monitorInstalling(reg.installing);
       reg.addEventListener('updatefound', ()=> monitorInstalling(reg.installing));
     }).catch(err=> console.error('SW registration failed', err));
