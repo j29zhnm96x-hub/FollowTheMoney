@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '8';
+const APP_VERSION = '9';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -540,6 +540,16 @@ const APP_VERSION = '8';
   }
 
   async function checkForUpdates(manual=false){
+    // Throttle auto-checks: max once per 60 seconds, and skip entirely for 30s after update reload
+    const now = Date.now();
+    const lastCheck = parseInt(sessionStorage.getItem('ftm-last-check') || '0', 10);
+    const updatedAt = parseInt(sessionStorage.getItem('ftm-updated-at') || '0', 10);
+    if(!manual){
+      if(now - lastCheck < 60000) return 'throttled';
+      if(now - updatedAt < 30000) return 'post-update-cooldown';
+    }
+    sessionStorage.setItem('ftm-last-check', String(now));
+
     if(manual && btnCheckUpdates){
       btnCheckUpdates.textContent = t('checking') || 'Checking...';
       btnCheckUpdates.disabled = true;
@@ -595,7 +605,7 @@ const APP_VERSION = '8';
 
   function applyUpdate(){
     hideUpdateToast();
-    try { sessionStorage.setItem('ftm-updated','1'); } catch(_){}
+    try { sessionStorage.setItem('ftm-updated','1'); sessionStorage.setItem('ftm-updated-at', String(Date.now())); } catch(_){}
     // Unregister SW and wipe caches so the next load is 100% fresh
     if('serviceWorker' in navigator){
       navigator.serviceWorker.getRegistrations().then(regs=>{
