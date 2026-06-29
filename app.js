@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '7';
+const APP_VERSION = '8';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -596,7 +596,22 @@ const APP_VERSION = '7';
   function applyUpdate(){
     hideUpdateToast();
     try { sessionStorage.setItem('ftm-updated','1'); } catch(_){}
-    window.location.reload();
+    // Unregister SW and wipe caches so the next load is 100% fresh
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistrations().then(regs=>{
+        Promise.all(regs.map(r=>r.unregister())).then(()=>{
+          if('caches' in window){
+            caches.keys().then(names=>Promise.all(names.map(n=>caches.delete(n)))).then(()=>{
+              window.location.reload();
+            });
+          } else {
+            window.location.reload();
+          }
+        });
+      });
+    } else {
+      window.location.reload();
+    }
   }
 
   let notifyTimer = null;
