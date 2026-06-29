@@ -187,8 +187,8 @@ html[data-theme='light'] .help-content section { background:rgba(0,0,0,0.02); bo
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  /* Ensure content clears the fixed top bar */
-  padding-top: calc(var(--topbar-offset) + 1rem);
+  /* Small breathing room below the top bar; screen padding already clears it */
+  padding-top: 1rem;
 }
 .summary-card {
   background:var(--panel);
