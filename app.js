@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '10';
+const APP_VERSION = '11';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -1800,10 +1800,20 @@ const APP_VERSION = '10';
     return t('all_time');
   }
   function filterTransactionsByGraphRange(list){
-    if(!graphDateRange || graphDateRange.type === 'all') return list;
+    let result = list;
+    // Apply season filter if active (same logic as History screen)
+    if(settings.historySeasonFilter && settings.seasonStart && settings.seasonEnd){
+      const seasonStart = new Date(settings.seasonStart);
+      seasonStart.setHours(0, 0, 0, 0);
+      const seasonEnd = new Date(settings.seasonEnd);
+      seasonEnd.setHours(23, 59, 59, 999);
+      result = result.filter(t => t && t.createdAt >= seasonStart.getTime() && t.createdAt <= seasonEnd.getTime());
+    }
+    // Apply graph's own date range filter
+    if(!graphDateRange || graphDateRange.type === 'all') return result;
     const { start, end } = graphDateRange;
-    if(!start || !end) return list;
-    return list.filter(t=> t && typeof t.createdAt === 'number' && t.createdAt >= start && t.createdAt <= end);
+    if(!start || !end) return result;
+    return result.filter(t=> t && typeof t.createdAt === 'number' && t.createdAt >= start && t.createdAt <= end);
   }
   function updateGraphRangeLabel(){
     if(!graphRangeBtn) return;
