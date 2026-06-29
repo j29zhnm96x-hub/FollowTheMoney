@@ -187,10 +187,8 @@ html[data-theme='light'] .help-content section { background:rgba(0,0,0,0.02); bo
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  /* moved closer to top bar for better visual alignment */
-  /* ~30px gap from top bar for consistent spacing */
-  padding-top: 30px;
-  transform: translateY(-75px);
+  /* Ensure content clears the fixed top bar */
+  padding-top: calc(var(--topbar-offset) + 1rem);
 }
 .summary-card {
   background:var(--panel);
