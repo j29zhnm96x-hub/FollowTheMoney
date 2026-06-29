@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '9';
+const APP_VERSION = '10';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -5057,8 +5057,8 @@ const APP_VERSION = '9';
           setTimeout(()=> showNotification(t('updated_successfully') || 'Updated successfully', 'success'), 600);
         }
       } catch(_){}
-      // Auto-check for updates after app is fully loaded
-      setTimeout(()=> checkForUpdates(false), 5000);
+      // Single background check on startup — shows toast only if update actually found
+      checkForUpdates(false);
     })
     .catch(err=>{
       console.error('DB init error', err);
@@ -5102,11 +5102,6 @@ const APP_VERSION = '9';
   registerServiceWorker();
 
   setInterval(()=> updateSeasonalStats(), 30 * 60 * 1000);
-
-  // Check for updates when app comes to foreground
-  document.addEventListener('visibilitychange', ()=>{
-    if(document.visibilityState === 'visible') checkForUpdates(false);
-  });
 
   window.addEventListener('beforeunload', ()=> flushLocalBackup('beforeunload'));
   document.addEventListener('visibilitychange', ()=>{
