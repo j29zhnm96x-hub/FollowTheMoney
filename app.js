@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '11';
+const APP_VERSION = '12';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -800,6 +800,9 @@ const APP_VERSION = '11';
       save_error: 'Unable to save your changes. Please try again.',
       group_delete_blocked: 'Unable to delete! There are items in this category/name group.',
       group_delete_confirm: 'Delete saved {kind} "{value}"? This cannot be undone.',
+      rename_prompt: 'Rename {kind} "{oldValue}" to:',
+      rename_success: 'Renamed "{oldValue}" to "{newValue}".',
+      rename_error: 'Failed to rename. Please try again.',
       group_delete_error: 'Unable to delete this entry right now. Please try again.',
       all_types: 'All types',
 
@@ -991,6 +994,9 @@ const APP_VERSION = '11';
       save_error: 'Nije moguće spremiti promjene. Pokušaj ponovno.',
       group_delete_blocked: 'Nije moguće izbrisati! Postoje stavke u ovoj kategoriji/nazivu.',
       group_delete_confirm: 'Izbriši spremljeno {kind} "{value}"? Ovo se ne može poništiti.',
+      rename_prompt: 'Preimenuj {kind} "{oldValue}" u:',
+      rename_success: 'Preimenovano "{oldValue}" u "{newValue}".',
+      rename_error: 'Preimenovanje nije uspjelo. Pokušaj ponovno.',
       group_delete_error: 'Trenutno nije moguće izbrisati ovaj unos. Pokušaj ponovno.',
       all_types: 'Sve vrste',
 
@@ -4483,6 +4489,10 @@ const APP_VERSION = '11';
       renderHistory();
     });
   }
+  let chipDblTapLastValue = '';
+  let chipDblTapLastKind = '';
+  let chipDblTapLastTime = 0;
+
   function handleChipRowClick(e){
     const chip = e.target.closest('.chip');
     if(!chip) return;
@@ -4492,7 +4502,25 @@ const APP_VERSION = '11';
     }
     const kind = chip.dataset.kind;
     if(!kind) return;
-    const nextValue = chip.dataset.value ? chip.dataset.value : null;
+    const value = chip.dataset.value;
+
+    // Double-tap detection for user-created chips (those with a value)
+    if(value){
+      const now = Date.now();
+      if(value === chipDblTapLastValue && kind === chipDblTapLastKind && now - chipDblTapLastTime < 300){
+        // Double tap on same chip → rename
+        chipDblTapLastValue = '';
+        chipDblTapLastKind = '';
+        chipDblTapLastTime = 0;
+        handleChipRename(kind, value);
+        return;
+      }
+      chipDblTapLastValue = value;
+      chipDblTapLastKind = kind;
+      chipDblTapLastTime = now;
+    }
+
+    const nextValue = value ? value : null;
     if(kind==='category'){
       if(historyCategoryFilter === nextValue) return;
       historyCategoryFilter = nextValue;
@@ -4511,6 +4539,68 @@ const APP_VERSION = '11';
     renderFilterChips();
     renderHistory();
   }
+
+  function handleChipRename(kind, oldValue){
+    if(!oldValue) return;
+    const label = kind === 'category' ? t('category') || 'category' : t('name') || 'name';
+    const newValue = prompt(tFmt('rename_prompt', { kind: label, oldValue }) || `Rename "${oldValue}" to:`, oldValue);
+    if(!newValue) return;
+    const trimmed = newValue.trim();
+    if(!trimmed || equalsIgnoreCase(trimmed, oldValue)) return;
+    // If the new name already exists in the collection, silently remove the old one instead of creating a duplicate
+    const collectionName = kind === 'category' ? 'categories' : 'names';
+    const field = kind === 'category' ? 'category' : 'name';
+    const scopes = ['income','expense'];
+    normalizeCollections();
+    let existingInAnyScope = false;
+    scopes.forEach(scope=>{
+      const key = collectionKey(scope, collectionName);
+      if(settings[key].some(item => equalsIgnoreCase(item, trimmed))) existingInAnyScope = true;
+    });
+    if(existingInAnyScope){
+      // New name already exists — just update transactions and remove old from collections
+      scopes.forEach(scope=>{
+        const key = collectionKey(scope, collectionName);
+        settings[key] = settings[key].filter(item => !equalsIgnoreCase(item, oldValue));
+      });
+    } else {
+      // New name doesn't exist — add it and remove old
+      scopes.forEach(scope=>{
+        const key = collectionKey(scope, collectionName);
+        settings[key] = settings[key].filter(item => !equalsIgnoreCase(item, oldValue));
+        if(!settings[key].some(item => equalsIgnoreCase(item, trimmed))){
+          settings[key].push(trimmed);
+          settings[key].sort((a,b)=> a.localeCompare(b,undefined,{sensitivity:'base'}));
+        }
+      });
+    }
+    // Update all transactions that use the old value and track which ones changed
+    const changedIds = new Set();
+    transactions.forEach(tx => {
+      if(tx[field] && equalsIgnoreCase(tx[field], oldValue)){
+        tx[field] = trimmed;
+        changedIds.add(tx.id);
+      }
+    });
+    // Persist settings + only the changed transactions
+    const savePromises = [dbSaveSettings(settings)];
+    changedIds.forEach(id => {
+      const tx = transactions.find(t => t.id === id);
+      if(tx) savePromises.push(dbAddTransaction(tx));
+    });
+
+    Promise.all(savePromises).then(()=>{
+      refreshCategoryOptions();
+      refreshNameOptions();
+      renderFilterChips();
+      renderHistory();
+      showNotification(tFmt('rename_success', { oldValue, newValue: trimmed }), 'success');
+    }).catch(err=>{
+      console.error('Rename failed:', err);
+      alert(t('rename_error'));
+    });
+  }
+
   if(categoryChipRow) categoryChipRow.addEventListener('click',handleChipRowClick);
   if(nameChipRow) nameChipRow.addEventListener('click',handleChipRowClick);
   attachLongPressHandlers(categoryChipRow,'.chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
