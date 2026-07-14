@@ -440,7 +440,7 @@ html[data-theme='light'] .type-filter-card { box-shadow:0 12px 24px rgba(0,0,0,.
 html[data-theme='light'] .type-pill.active::after { background:#f5e8cf; border:2px solid #b388ff; }
 .chip-row { display:flex; gap:.5rem; overflow-x:auto; padding:0 1.3rem 0 1.25rem; margin:0 0 .75rem; }
 .chip-row::-webkit-scrollbar { display:none; }
-.chip { border:1px solid var(--panel-border); border-radius:999px; padding:.35rem .9rem; font-size:.8rem; font-weight:600; background:var(--panel); color:var(--fg); cursor:pointer; white-space:nowrap; transition:.2s ease; }
+.chip { border:1px solid var(--panel-border); border-radius:999px; padding:.35rem .9rem; font-size:.8rem; font-weight:600; background:var(--panel); color:var(--fg); cursor:pointer; white-space:nowrap; transition:.2s ease; touch-action:manipulation; }
 .chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 /* Insights landscape shell */
 #screen-graph {
