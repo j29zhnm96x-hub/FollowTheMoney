@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '12';
+const APP_VERSION = '13';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -4489,38 +4489,48 @@ const APP_VERSION = '12';
       renderHistory();
     });
   }
-  let chipDblTapLastValue = '';
-  let chipDblTapLastKind = '';
-  let chipDblTapLastTime = 0;
+  // Double-tap detection for chip rename (uses pointerdown for reliable timing)
+  let chipDblTapValue = '';
+  let chipDblTapKind = '';
+  let chipDblTapTime = 0;
+
+  function handleChipDblTapDetect(e){
+    const chip = e.target.closest('.chip');
+    if(!chip || !chip.dataset.value) return;
+    const kind = chip.dataset.kind;
+    const value = chip.dataset.value;
+    const now = Date.now();
+    if(value === chipDblTapValue && kind === chipDblTapKind && now - chipDblTapTime < 400){
+      // Double tap confirmed — set flag on the row to skip the upcoming click
+      chipDblTapValue = '';
+      chipDblTapKind = '';
+      chipDblTapTime = 0;
+      const row = chip.closest('[id$="ChipRow"]') || chip.parentElement;
+      if(row) row.dataset.skipNextChipClick = '1';
+      handleChipRename(kind, value);
+      return;
+    }
+    chipDblTapValue = value;
+    chipDblTapKind = kind;
+    chipDblTapTime = now;
+  }
 
   function handleChipRowClick(e){
     const chip = e.target.closest('.chip');
     if(!chip) return;
+    // If double-tap was already handled on pointerdown, skip this click
+    const row = e.currentTarget;
+    if(row && row.dataset.skipNextChipClick === '1'){
+      row.dataset.skipNextChipClick = '0';
+      return;
+    }
     if(chip.dataset.skipNextClick === '1'){
       chip.dataset.skipNextClick = '0';
       return;
     }
     const kind = chip.dataset.kind;
     if(!kind) return;
-    const value = chip.dataset.value;
-
-    // Double-tap detection for user-created chips (those with a value)
-    if(value){
-      const now = Date.now();
-      if(value === chipDblTapLastValue && kind === chipDblTapLastKind && now - chipDblTapLastTime < 300){
-        // Double tap on same chip → rename
-        chipDblTapLastValue = '';
-        chipDblTapLastKind = '';
-        chipDblTapLastTime = 0;
-        handleChipRename(kind, value);
-        return;
-      }
-      chipDblTapLastValue = value;
-      chipDblTapLastKind = kind;
-      chipDblTapLastTime = now;
-    }
-
-    const nextValue = value ? value : null;
+    const nextValue = chip.dataset.value ? chip.dataset.value : null;
     if(kind==='category'){
       if(historyCategoryFilter === nextValue) return;
       historyCategoryFilter = nextValue;
@@ -4603,6 +4613,8 @@ const APP_VERSION = '12';
 
   if(categoryChipRow) categoryChipRow.addEventListener('click',handleChipRowClick);
   if(nameChipRow) nameChipRow.addEventListener('click',handleChipRowClick);
+  if(categoryChipRow) categoryChipRow.addEventListener('pointerdown',handleChipDblTapDetect);
+  if(nameChipRow) nameChipRow.addEventListener('pointerdown',handleChipDblTapDetect);
   attachLongPressHandlers(categoryChipRow,'.chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
   attachLongPressHandlers(nameChipRow,'.chip', handleGroupLongPress, GROUP_DELETE_LONG_PRESS_MS);
   attachLongPressHandlers(recentListEl,'.recent-item', handleRecentCardLongPress);
