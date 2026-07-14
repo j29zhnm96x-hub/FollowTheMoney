@@ -1880,6 +1880,7 @@ const APP_VERSION = '14';
     graphDateRange = next || { type:'all', start:null, end:null };
     updateGraphRangeLabel();
     hideGraphRangeMenu();
+    hideBreakdownInfo();
     refreshGraphIfVisible();
   }
   function buildGraphSegments(typeOverride, txList){
@@ -2278,6 +2279,7 @@ const APP_VERSION = '14';
     const next = mode === 'timeline' ? 'timeline' : 'classic';
     if(graphMode === next) return;
     graphMode = next;
+    hideBreakdownInfo();
     if(graphMainEl) graphMainEl.hidden = graphMode === 'timeline';
     if(graphTimelineEl) graphTimelineEl.hidden = graphMode !== 'timeline';
     if(btnGraphTimeline) btnGraphTimeline.setAttribute('aria-pressed', graphMode === 'timeline' ? 'true' : 'false');
@@ -2673,9 +2675,10 @@ const APP_VERSION = '14';
 
     content.innerHTML = '';
 
-    const typeLabel = graphType === 'income' ? t('income') : 'Expense';
+    const typeLabel = graphType === 'income' ? t('income') : t('expense') || 'Expense';
+    const rangeLabel = formatGraphRangeLabel(graphDateRange);
     const titleEl = document.getElementById('breakdownInfoTitle');
-    if(titleEl) titleEl.textContent = (t('breakdown_stats_title') || 'Stats') + ' — ' + typeLabel;
+    if(titleEl) titleEl.textContent = `${t('breakdown_stats_title') || 'Stats'} — ${typeLabel} · ${rangeLabel}`;
 
     const renderSection = (label, data, minCount) => {
       if(data.length < minCount) return;
@@ -4877,6 +4880,7 @@ const APP_VERSION = '14';
       const next = btn.dataset.graphType || 'expense';
       if(next === graphType) return;
       graphType = next;
+      hideBreakdownInfo();
       updateGraphTypeButtons();
       renderGraph();
     });
@@ -4885,6 +4889,7 @@ const APP_VERSION = '14';
     input.addEventListener('change',()=>{
       if(!input.checked) return;
       graphGrouping = input.value === 'name' ? 'name' : 'category';
+      hideBreakdownInfo();
       renderGraph();
     });
   });
