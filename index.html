@@ -166,12 +166,28 @@
           <div class="graph-breakdown-card">
             <div class="graph-breakdown-header">
               <h2>Breakdown</h2>
-              <span class="timeline-scroll-indicators legend-scroll-indicators" aria-hidden="true" id="graphLegendScrollIndicators">
-                <span class="timeline-scroll-arrow up" id="graphLegendScrollArrowUp"></span>
-                <span class="timeline-scroll-arrow down" id="graphLegendScrollArrowDown"></span>
-              </span>
+              <div class="graph-breakdown-header-actions">
+                <button id="btnBreakdownInfo" class="graph-icon-btn" type="button" aria-label="Breakdown stats" title="Breakdown stats">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                </button>
+                <span class="timeline-scroll-indicators legend-scroll-indicators" aria-hidden="true" id="graphLegendScrollIndicators">
+                  <span class="timeline-scroll-arrow up" id="graphLegendScrollArrowUp"></span>
+                  <span class="timeline-scroll-arrow down" id="graphLegendScrollArrowDown"></span>
+                </span>
+              </div>
             </div>
             <div class="graph-legend" id="graphLegend" aria-live="polite"></div>
+            <div id="breakdownInfoPanel" class="breakdown-info-panel" hidden>
+              <div class="breakdown-info-header">
+                <h3 id="breakdownInfoTitle">Stats</h3>
+                <button id="btnBreakdownInfoClose" class="graph-icon-btn" type="button" aria-label="Close stats">✕</button>
+              </div>
+              <div id="breakdownInfoContent" class="breakdown-info-content"></div>
+            </div>
           </div>
           <div class="graph-chart-card">
             <div class="graph-canvas-shell">

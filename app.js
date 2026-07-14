@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '13';
+const APP_VERSION = '14';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -726,6 +726,13 @@ const APP_VERSION = '13';
       by_names: 'by names',
       all_categories_excluded: 'All categories excluded',
       all_names_excluded: 'All names excluded',
+      legend_info_btn: 'Details',
+      no_subcategories: 'No entries',
+      breakdown_stats_title: 'Stats',
+      breakdown_avg: 'Average',
+      breakdown_high: 'Highest',
+      breakdown_low: 'Lowest',
+      breakdown_no_data: 'Not enough data yet. Need at least 3 periods.',
       no_data_yet: 'No data yet',
       no_data_to_visualize: 'No data to visualize yet.',
       timeline: 'Timeline',
@@ -920,6 +927,13 @@ const APP_VERSION = '13';
       by_names: 'po nazivima',
       all_categories_excluded: 'Sve kategorije isključene',
       all_names_excluded: 'Svi nazivi isključeni',
+      legend_info_btn: 'Detalji',
+      no_subcategories: 'Nema unosa',
+      breakdown_stats_title: 'Statistika',
+      breakdown_avg: 'Prosjek',
+      breakdown_high: 'Najviši',
+      breakdown_low: 'Najniži',
+      breakdown_no_data: 'Nedovoljno podataka. Potrebna su najmanje 3 razdoblja.',
       no_data_yet: 'Nema podataka',
       no_data_to_visualize: 'Nema podataka za prikaz.',
       timeline: 'Vremenska crta',
@@ -1521,6 +1535,10 @@ const APP_VERSION = '13';
     if(a==null || b==null) return false;
     return String(a).toLowerCase() === String(b).toLowerCase();
   };
+  const escapeHtml = str=>{
+    if(!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  };
   const normalizeSearchText = value=>{
     if(value == null) return '';
     const text = String(value);
@@ -1982,6 +2000,22 @@ const APP_VERSION = '13';
       } else {
         const percent = total>0 ? Math.round((segment.value/total)*1000)/10 : 0;
         pct.textContent = `${percent}%`;
+      }
+      // Per-card info button (category grouping only — shows names within category)
+      if(graphGrouping === 'category' && segment.label){
+        const infoBtn = document.createElement('button');
+        infoBtn.type = 'button';
+        infoBtn.className = 'legend-info-btn';
+        infoBtn.textContent = 'i';
+        infoBtn.setAttribute('aria-label', t('legend_info_btn') || 'Details');
+        infoBtn.dataset.category = segment.label;
+        infoBtn.addEventListener('click', (function(catLabel, txList){
+          return function(e){
+            e.stopPropagation();
+            showLegendSubList(catLabel, txList);
+          };
+        })(segment.label, filteredTxs));
+        legendItem.appendChild(infoBtn);
       }
       legendItem.appendChild(dot);
       legendItem.appendChild(textWrap);
@@ -2490,6 +2524,203 @@ const APP_VERSION = '13';
       legendPopupEl.remove();
       legendPopupEl = null;
     }
+  }
+
+  function showLegendSubList(category, txList){
+    // Close any existing sub-list popups
+    document.querySelectorAll('.legend-sub-list').forEach(el=>el.remove());
+    // Find the legend item for this category
+    const legendItem = document.querySelector(`.graph-legend-item[data-label="${CSS.escape(category)}"]`);
+    if(!legendItem) return;
+    // Build sub-list of names within this category
+    const namesMap = new Map();
+    txList.forEach(tx=>{
+      if(!tx.category || !equalsIgnoreCase(tx.category, category)) return;
+      if(!tx.name) return;
+      const current = namesMap.get(tx.name) || 0;
+      namesMap.set(tx.name, current + Math.abs(tx.amountCents));
+    });
+    const subList = document.createElement('div');
+    subList.className = 'legend-sub-list';
+    if(namesMap.size === 0){
+      subList.innerHTML = '<div class="sub-empty">' + (t('no_subcategories') || 'No entries') + '</div>';
+    } else {
+      Array.from(namesMap.entries())
+        .sort((a,b)=> b[1] - a[1])
+        .forEach(([name, sum])=>{
+          const row = document.createElement('div');
+          row.className = 'sub-item';
+          row.innerHTML = `<span class="sub-name">${escapeHtml(name)}</span><span class="sub-amount">${formatCurrency(sum)}</span>`;
+          subList.appendChild(row);
+        });
+    }
+    legendItem.appendChild(subList);
+    // Close on click outside
+    const closeHandler = (e)=>{
+      if(!subList || !legendItem) return;
+      if(!subList.contains(e.target) && !e.target.classList.contains('legend-info-btn')){
+        subList.remove();
+        document.removeEventListener('click', closeHandler);
+      }
+    };
+    requestAnimationFrame(()=> document.addEventListener('click', closeHandler));
+  }
+
+  function computeBreakdownStats(filteredTxs, graphType, rangeStart, rangeEnd){
+    // Filter by type
+    const isIncome = graphType === 'income';
+    const typeTxs = filteredTxs.filter(tx=> isIncome ? tx.amountCents>=0 : tx.amountCents<0);
+    if(typeTxs.length === 0) return { months: [], weeks: [], days: [] };
+
+    // Determine date range
+    const start = rangeStart || Math.min(...typeTxs.map(t=>t.createdAt));
+    const end = rangeEnd || Math.max(...typeTxs.map(t=>t.createdAt));
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    // Helper: get amount for a transaction range
+    const sumRange = (txList, s, e)=> {
+      return txList.filter(tx=> tx.createdAt >= s && tx.createdAt <= e)
+        .reduce((sum,tx)=> sum + Math.abs(tx.amountCents), 0);
+    };
+
+    // --- Monthly breakdown ---
+    const months = [];
+    let mCursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const mEnd = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0);
+    while(mCursor <= mEnd){
+      const mStart = mCursor.getTime();
+      const mEndTs = new Date(mCursor.getFullYear(), mCursor.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      const sum = sumRange(typeTxs, mStart, mEndTs);
+      months.push({ label: formatMonth(mCursor), start: mStart, sum });
+      mCursor.setMonth(mCursor.getMonth() + 1);
+    }
+
+    // --- Weekly breakdown ---
+    const weeks = [];
+    let wCursor = new Date(startDate);
+    wCursor.setDate(wCursor.getDate() - wCursor.getDay() + 1); // Monday
+    wCursor.setHours(0,0,0,0);
+    while(wCursor <= endDate){
+      const wStart = wCursor.getTime();
+      const wEndTs = new Date(wCursor);
+      wEndTs.setDate(wEndTs.getDate() + 6);
+      wEndTs.setHours(23,59,59,999);
+      const sum = sumRange(typeTxs, wStart, wEndTs.getTime());
+      weeks.push({ label: formatWeek(wCursor), start: wStart, sum });
+      wCursor.setDate(wCursor.getDate() + 7);
+    }
+
+    // --- Daily breakdown ---
+    const days = [];
+    let dCursor = new Date(startDate);
+    dCursor.setHours(0,0,0,0);
+    while(dCursor <= endDate){
+      const dStart = dCursor.getTime();
+      const dEndTs = new Date(dCursor);
+      dEndTs.setHours(23,59,59,999);
+      const sum = sumRange(typeTxs, dStart, dEndTs.getTime());
+      days.push({ label: formatDay(dCursor), start: dStart, sum });
+      dCursor.setDate(dCursor.getDate() + 1);
+    }
+
+    return { months, weeks, days };
+  }
+
+  function formatMonth(date){
+    const months = date.getMonth();
+    const year = date.getFullYear().toString().slice(-2);
+    const lang = getLang();
+    const names = lang === 'hr'
+      ? ['Sij','Velj','Ožu','Tra','Svi','Lip','Srp','Kol','Ruj','Lis','Stu','Pro']
+      : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return names[months] + ' ' + year;
+  }
+
+  function formatWeek(date){
+    const lang = getLang();
+    const prefix = lang === 'hr' ? 'Tj' : 'Wk';
+    const d = new Date(date);
+    // ISO week number
+    const dayNum = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - dayNum + 3);
+    const firstThursday = d.valueOf();
+    d.setMonth(0, 1);
+    if(d.getDay() !== 4) d.setMonth(0, 1 + ((4 - d.getDay()) + 7) % 7);
+    const weekNum = 1 + Math.ceil((firstThursday - d) / 604800000);
+    return `${prefix} ${weekNum}`;
+  }
+
+  function formatDay(date){
+    const d = date.getDate();
+    const months = date.getMonth();
+    const lang = getLang();
+    const names = lang === 'hr'
+      ? ['Sij','Velj','Ožu','Tra','Svi','Lip','Srp','Kol','Ruj','Lis','Stu','Pro']
+      : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d + ' ' + names[months];
+  }
+
+  function showBreakdownInfo(){
+    const panel = document.getElementById('breakdownInfoPanel');
+    const content = document.getElementById('breakdownInfoContent');
+    if(!panel || !content) return;
+
+    const filteredTxs = filterTransactionsByGraphRange(transactions);
+    const rangeStart = graphDateRange && graphDateRange.start ? graphDateRange.start : null;
+    const rangeEnd = graphDateRange && graphDateRange.end ? graphDateRange.end : null;
+    const stats = computeBreakdownStats(filteredTxs, graphType, rangeStart, rangeEnd);
+
+    content.innerHTML = '';
+
+    const typeLabel = graphType === 'income' ? t('income') : 'Expense';
+    const titleEl = document.getElementById('breakdownInfoTitle');
+    if(titleEl) titleEl.textContent = (t('breakdown_stats_title') || 'Stats') + ' — ' + typeLabel;
+
+    const renderSection = (label, data, minCount) => {
+      if(data.length < minCount) return;
+      const sums = data.filter(d => d.sum > 0).map(d => d.sum);
+      if(sums.length < minCount) return;
+      const avg = Math.round(sums.reduce((a,b)=>a+b,0) / sums.length);
+      const high = Math.max(...sums);
+      const low = Math.min(...sums);
+      const highLabel = data.find(d => d.sum === high)?.label || '';
+      const lowLabel = data.find(d => d.sum === low)?.label || '';
+
+      const section = document.createElement('div');
+      section.className = 'breakdown-info-period';
+      section.innerHTML = `
+        <h4>${label}</h4>
+        <div class="breakdown-info-row"><span class="label">${t('breakdown_avg') || 'Average'}</span><span class="value">${formatCurrency(avg)}</span></div>
+        <div class="breakdown-info-row"><span class="label">${t('breakdown_high') || 'Highest'} (${escapeHtml(highLabel)})</span><span class="value high">${formatCurrency(high)}</span></div>
+        <div class="breakdown-info-row"><span class="label">${t('breakdown_low') || 'Lowest'} (${escapeHtml(lowLabel)})</span><span class="value low">${formatCurrency(low)}</span></div>
+      `;
+      content.appendChild(section);
+    };
+
+    const totalMonths = stats.months.filter(m => m.sum > 0).length;
+    const totalWeeks = stats.weeks.filter(w => w.sum > 0).length;
+    const totalDays = stats.days.filter(d => d.sum > 0).length;
+
+    const lang = getLang();
+    const monthLabel = lang === 'hr' ? 'Mjesečno' : 'Monthly';
+    const weekLabel = lang === 'hr' ? 'Tjedno' : 'Weekly';
+    const dayLabel = lang === 'hr' ? 'Dnevno' : 'Daily';
+
+    renderSection(monthLabel, stats.months, 3);
+    renderSection(weekLabel, stats.weeks, 3);
+    renderSection(dayLabel, stats.days, 3);
+
+    if(!content.children.length){
+      content.innerHTML = '<div class="breakdown-info-empty">' + (t('breakdown_no_data') || 'Not enough data yet. Need at least 3 periods.') + '</div>';
+    }
+
+    panel.hidden = false;
+  }
+
+  function hideBreakdownInfo(){
+    const panel = document.getElementById('breakdownInfoPanel');
+    if(panel) panel.hidden = true;
   }
   function handleGlobalLegendPointerDown(evt){
     if(!legendPopupEl) return;
@@ -4757,6 +4988,10 @@ const APP_VERSION = '13';
   if(graphLegendEl){
     graphLegendEl.addEventListener('scroll', updateGraphLegendScrollIndicators);
   }
+  const btnBreakdownInfo = document.getElementById('btnBreakdownInfo');
+  const btnBreakdownInfoClose = document.getElementById('btnBreakdownInfoClose');
+  if(btnBreakdownInfo) btnBreakdownInfo.addEventListener('click', showBreakdownInfo);
+  if(btnBreakdownInfoClose) btnBreakdownInfoClose.addEventListener('click', hideBreakdownInfo);
   window.addEventListener('pointerup', handleTimelinePointerUp);
   window.addEventListener('pointercancel', handleTimelinePointerUp);
   function handleConfirm(e){
