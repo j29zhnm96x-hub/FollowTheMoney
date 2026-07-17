@@ -1,14 +1,14 @@
-const CACHE_NAME = 'ftm-v2';
+const CACHE_NAME = 'ftm-v3';
 
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './version.json',
-  './styles.css?v=4',
-  './app.js?v=4',
-  './theme.js?v=4',
-  './seasonal.js?v=4',
+  './styles.css?v=5',
+  './app.js?v=5',
+  './theme.js?v=5',
+  './seasonal.js?v=5',
   './img/favicon.png?v=2',
   './favicon.ico'
 ];

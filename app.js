@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '14';
+const APP_VERSION = '15';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -5434,7 +5434,7 @@ const APP_VERSION = '14';
         }
       });
     };
-    navigator.serviceWorker.register('sw.js?v=4', { updateViaCache: 'none' }).then(reg=>{
+    navigator.serviceWorker.register('sw.js?v=5', { updateViaCache: 'none' }).then(reg=>{
       if(reg.installing) monitorInstalling(reg.installing);
       reg.addEventListener('updatefound', ()=> monitorInstalling(reg.installing));
     }).catch(err=> console.error('SW registration failed', err));
