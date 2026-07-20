@@ -1183,7 +1183,7 @@ html[data-theme='light'] .legend-hold-popup button:hover {
 html[data-theme='light'] .group-summary { box-shadow:0 12px 28px rgba(0,0,0,.12); }
 .group-summary .label { font-size:.9rem; }
 .group-summary .sum { font-size:1rem; font-variant-numeric:tabular-nums; }
-.hidden-input { position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+.hidden-input { position:fixed; top:0; left:0; width:1px; height:1px; opacity:0.01; pointer-events:none; font-size:16px; }
 .fade-in { animation:fade .3s ease; }
 @keyframes fade { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
 @keyframes recentPressFlash {

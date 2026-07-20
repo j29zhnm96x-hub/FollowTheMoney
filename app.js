@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '15';
+const APP_VERSION = '16';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -3995,7 +3995,10 @@ const APP_VERSION = '15';
       sheetTypeLabel.classList.remove('expense','income');
       sheetTypeLabel.classList.add(type === 'expense' ? 'expense' : 'income');
     }
-    setTimeout(()=>rawDigits.focus(),100);
+    setTimeout(()=>{
+      rawDigits.focus();
+      if(rawDigits.select) rawDigits.select();
+    }, 320);
   }
   function closeSheet(){ 
     sheet.hidden=true; 
