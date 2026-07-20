@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '17';
+const APP_VERSION = '18';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -3996,8 +3996,7 @@ const APP_VERSION = '17';
       sheetTypeLabel.classList.add(type === 'expense' ? 'expense' : 'income');
     }
     setTimeout(()=>{
-      rawDigits.focus();
-      if(rawDigits.select) rawDigits.select();
+      if(sheetAmountEl) sheetAmountEl.click();
     }, 320);
   }
   function closeSheet(){ 
@@ -5437,7 +5436,7 @@ const APP_VERSION = '17';
         }
       });
     };
-    navigator.serviceWorker.register('sw.js?v=6', { updateViaCache: 'none' }).then(reg=>{
+    navigator.serviceWorker.register('sw.js?v=7', { updateViaCache: 'none' }).then(reg=>{
       if(reg.installing) monitorInstalling(reg.installing);
       reg.addEventListener('updatefound', ()=> monitorInstalling(reg.installing));
     }).catch(err=> console.error('SW registration failed', err));
