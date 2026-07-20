@@ -1,5 +1,5 @@
 /* FollowTheMoney vanilla JS */
-const APP_VERSION = '18';
+const APP_VERSION = '19';
 
 (function(){
   const $ = sel => document.querySelector(sel);
@@ -3995,9 +3995,9 @@ const APP_VERSION = '18';
       sheetTypeLabel.classList.remove('expense','income');
       sheetTypeLabel.classList.add(type === 'expense' ? 'expense' : 'income');
     }
-    setTimeout(()=>{
-      if(sheetAmountEl) sheetAmountEl.click();
-    }, 320);
+    // Focus synchronously while still in the gesture chain (no setTimeout — iOS needs this for keyboard)
+    rawDigits.focus();
+    if(rawDigits.select) rawDigits.select();
   }
   function closeSheet(){ 
     sheet.hidden=true; 
